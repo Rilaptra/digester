@@ -1,5 +1,6 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import pkg from "../../package.json";
 
 // Helper to simulate __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -12,7 +13,7 @@ const isBuilt = __filename.includes("\\dist");
 const ROOT_DIR = join(__dirname, isBuilt ? "../" : "../../");
 
 export const SYSTEM = {
-  VERSION: "13.0.0-ai",
+  VERSION: pkg.version,
   ROOT_DIR,
   FILENAME: __filename,
   OUT_DIR: join(ROOT_DIR, "generated"),

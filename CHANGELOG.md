@@ -1,5 +1,8 @@
 # Changelog
 
+## [14.3.1-ai] - 2026-01-09
+- ⚙️ **Refactor**: Load system version dynamically from `package.json` instead of using a hardcoded constant in system defaults.
+
 ### [2026-01-09]
 - 📖 **Docs**: Updated documentation to recommend `gemini-flash-latest` model.
 
