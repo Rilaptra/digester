@@ -1,6 +1,6 @@
 {
   "name": "prompter",
-  "module": "index.ts",
+  "module": "src/index.ts",
   "type": "module",
   "devDependencies": {
     "bun-types": "latest"
@@ -12,5 +12,5 @@
     "cli-table3": "^0.6.5",
     "ora": "^9.0.0"
   },
-  "version": "1.2.0"
+  "version": "14.0.0-ai"
 }
