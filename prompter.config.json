@@ -12,6 +12,7 @@
     ".output",
     "coverage",
     ".vercel",
+    "prompter.config.json",
     ".vscode",
     ".idea",
     "__pycache__",
@@ -23,7 +24,6 @@
     "package-lock.json",
     "assets",
     "public",
-    "baileys_auth_session",
     "jspm_packages",
     "vendor",
     ".contentlayer"
@@ -57,7 +57,6 @@
     ".woff2",
     ".eot",
     ".o",
-    ".log",
     ".obj",
     ".rmeta",
     ".rlib",
