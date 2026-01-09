@@ -1,5 +1,8 @@
 # Changelog
 
+### [2026-01-09]
+- 📖 **Docs**: Updated documentation to recommend `gemini-flash-latest` model.
+
 ## [14.3.0-ai] - 2026-01-09
 - ✨ **Enhancement**: Transitioned from dynamic command discovery (file system scanning) to static command loading via an auto-generated registry, significantly improving build compatibility and application reliability when bundled.
 

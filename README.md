@@ -80,7 +80,7 @@ bun start setup
 Get a free API Key from [Google AI Studio](https://aistudio.google.com/).
 ```bash
 digest set-key YOUR_API_KEY
-digest set-model # Recommended: gemini-1.5-flash
+digest set-model # Recommended: gemini-flash-latest
 ```
 
 ---
