@@ -337,13 +337,10 @@ class AIManager {
 class GitManager {
   static prepareAndGetDiff(): string {
     try {
-      // Target folder ASLI si script ini (SYSTEM.SCRIPT_DIR), bukan current folder user
       const targetDir = SYSTEM.SCRIPT_DIR;
       const gitDir = join(targetDir, ".git");
 
-      // 1. Cek .git di folder script
       if (!existsSync(gitDir)) {
-        // Harusnya sih udah ada kalo ini repo dev kamu, tapi jaga-jaga
         console.log(
           chalk.yellow(
             `⚠️  Git not found in tool dir (${targetDir}). Initializing...`
@@ -352,10 +349,7 @@ class GitManager {
         execSync("git init", { cwd: targetDir, stdio: "ignore" });
       }
 
-      // 2. Add files di folder script
       execSync("git add .", { cwd: targetDir, stdio: "ignore" });
-
-      // 3. Ambil diff dari folder script
       return execSync("git diff --cached", {
         cwd: targetDir,
         encoding: "utf-8",
@@ -366,7 +360,6 @@ class GitManager {
   }
 
   static updateVersion(bumpType: string): string | null {
-    // Baca package.json milik DIGESTER sendiri
     const pkgPath = join(SYSTEM.SCRIPT_DIR, "package.json");
     if (!existsSync(pkgPath)) return null;
 
@@ -390,12 +383,10 @@ class GitManager {
       pkg.version = newVer;
       writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
 
-      // Add package.json milik digester
       execSync("git add package.json", {
         cwd: SYSTEM.SCRIPT_DIR,
         stdio: "ignore",
       });
-
       return newVer;
     } catch {
       return null;
@@ -403,8 +394,8 @@ class GitManager {
   }
 
   static async executeCommit(msg: string, tag?: string) {
+    const opts = { cwd: SYSTEM.SCRIPT_DIR, stdio: "inherit" as any };
     try {
-      const opts = { cwd: SYSTEM.SCRIPT_DIR, stdio: "inherit" as any };
       execSync(`git commit -m "${msg}"`, opts);
 
       if (tag) {
@@ -413,6 +404,23 @@ class GitManager {
       }
     } catch (e) {
       console.error(chalk.red("❌ Git commit failed."));
+      throw e; // Lempar error biar gak lanjut push
+    }
+  }
+
+  // 🔥 NEW: AUTO PUSH FUNCTION
+  static pushToRemote() {
+    const opts = { cwd: SYSTEM.SCRIPT_DIR, stdio: "inherit" as any };
+    console.log(chalk.yellow("\n🚀 Pushing to remote (origin)..."));
+    try {
+      // Push HEAD (current branch) dan tags sekaligus
+      execSync("git push origin HEAD --tags", opts);
+      console.log(chalk.green("   ✅ Push Success!"));
+    } catch (e) {
+      console.log(chalk.red("\n❌ Push Failed."));
+      console.log(
+        chalk.dim("   Check your internet or 'git remote -v' config.")
+      );
     }
   }
 }
@@ -550,7 +558,7 @@ class AppController {
     }
   }
 
-  // --- FEATURE: AI COMMIT (SELF-UPDATE) ---
+  // --- FEATURE: AI COMMIT (SELF-UPDATE + PUSH) ---
   private async aiCommit() {
     console.log(
       Boxen(chalk.cyan("🤖 AUTO OPS AGENT (SELF-UPDATE)"), {
@@ -558,7 +566,7 @@ class AppController {
         borderStyle: "round",
       })
     );
-    console.log(chalk.dim(`Target Repo: ${SYSTEM.SCRIPT_DIR}`)); // Debug info biar yakin
+    console.log(chalk.dim(`Target Repo: ${SYSTEM.SCRIPT_DIR}`));
 
     const auth = ConfigManager.getAuth();
     if (!auth.apiKey) {
@@ -569,8 +577,6 @@ class AppController {
     }
 
     const spinner = ora("Checking internal changes...").start();
-
-    // Ini sekarang nge-cek folder script, bukan folder user
     const diff = GitManager.prepareAndGetDiff();
 
     if (!diff || diff.trim().length === 0) {
@@ -594,13 +600,13 @@ class AppController {
       console.log(`   ${chalk.yellow("Log")}     : ${result.changelog}\n`);
 
       const confirm = await Utils.promptYesNo(
-        `${chalk.bgBlue.black(" EXECUTE ")} Commit Digester Update? ${chalk.dim(
+        `${chalk.bgBlue.black(" EXECUTE ")} Commit & Push? ${chalk.dim(
           "(Y/n)"
         )} `
       );
 
       if (confirm) {
-        // 1. Update Version (Internal Package.json)
+        // 1. Update Version
         let newVer = null;
         if (result.bump !== "none") {
           newVer = GitManager.updateVersion(result.bump);
@@ -610,8 +616,8 @@ class AppController {
             );
         }
 
-        // 2. Append Changelog (Internal CHANGELOG.md)
-        const changelogPath = join(SYSTEM.SCRIPT_DIR, "CHANGELOG.md"); // Pake Path SCRIPT_DIR
+        // 2. Update Changelog
+        const changelogPath = join(SYSTEM.SCRIPT_DIR, "CHANGELOG.md");
         if (!existsSync(changelogPath))
           await Bun.write(changelogPath, "# Changelog\n\n");
 
@@ -620,23 +626,22 @@ class AppController {
         const currentContent = await Bun.file(changelogPath).text();
         await Bun.write(changelogPath, currentContent + entry);
 
-        // Add changelog
         execSync("git add CHANGELOG.md", {
           cwd: SYSTEM.SCRIPT_DIR,
           stdio: "ignore",
         });
         console.log(chalk.green(`   ✅ Updated internal CHANGELOG.md`));
 
-        // 3. Final Commit
+        // 3. Commit & Tag
         await GitManager.executeCommit(
           result.commitMessage,
           newVer || undefined
         );
 
-        console.log(chalk.bgGreen.black("\n 🚀 DIGESTER UPDATED "));
-        console.log(
-          chalk.dim("Don't forget to push: git push origin main --tags")
-        );
+        // 4. 🔥 AUTO PUSH
+        GitManager.pushToRemote();
+
+        console.log(chalk.bgGreen.black("\n 🎉 DONE (Committed & Pushed) "));
       } else {
         console.log(chalk.dim("Aborted."));
       }
