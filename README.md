@@ -1,139 +1,106 @@
 # ⚡ Digester CLI
 
-> **The Ultimate Codebase Digester for LLM Context.**  
-> Stop copy-pasting files manually. Feed your entire project context to ChatGPT, Claude, or DeepSeek in seconds.
+> **The Ultimate Codebase Digester & AI Ops Agent.**  
+> Stop copy-pasting files manually. Stop writing boring commit messages. Let AI handle your entire workflow.
 
 ![Bun](https://img.shields.io/badge/Runtime-Bun_v1.0+-black?logo=bun&style=for-the-badge)
 ![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue?logo=typescript&style=for-the-badge)
+![AI](https://img.shields.io/badge/AI-Google_Gemini-8E75B2?logo=google-gemini&style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Stable_v11.4-purple?style=for-the-badge)
+[![GitHub Release](https://img.shields.io/github/v/release/Rilaptra/digester?style=for-the-badge&color=orange)](https://github.com/Rilaptra/digester/releases)
 
 ---
 
 ## 📖 What is Digester?
 
-**Digester** is a high-performance CLI tool built with **Bun** & **TypeScript** designed to scan your codebase, generate a visual file tree, and concatenate relevant source code into a single Markdown file.
+**Digester** is a high-performance CLI tool built with **Bun** & **TypeScript**. Originally designed to convert your codebase into a single context file for LLMs, it has evolved into a powerful **AI Operations Agent**.
 
-This "digest" is optimized for Large Language Models (LLMs), allowing you to provide full context for code review, refactoring, or feature implementation without hitting token limits with garbage files.
+It doesn't just read code; it helps you maintain it.
 
 ## 🚀 Key Features
 
-- **⚡ Blazing Fast:** Powered by Bun runtime & asynchronous concurrency.
+### 🧠 Core Features (Context Generation)
+- **⚡ Blazing Fast:** Scans thousands of files in milliseconds using Bun.
 - **🌳 Tree Visualization:** Generates a clean ASCII directory structure.
-- **🛡️ Smart Ignoring:** Automatically skips `node_modules`, lockfiles, binary files (`.exe`, `.png`, etc.), and respects `.gitignore`.
-- **⚙️ Fully Configurable:** Customize ignore patterns and file size limits via `prompter.config.json`.
-- **💻 Global Command:** Includes a setup wizard to install the `digest` command to your system PATH (Windows).
-- **📝 Markdown Output:** Produces syntax-highlighted markdown ready for LLM consumption.
+- **🛡️ Smart Ignoring:** Respects `.gitignore` + smart defaults (skips `node_modules`, lockfiles, binary files).
+- **📝 Markdown Output:** Produces syntax-highlighted markdown ready for ChatGPT/Claude/DeepSeek.
+
+### 🤖 AI Auto-Ops (New in v12!)
+- **✍️ Auto-Commit:** AI analyzes your `git diff` and writes Conventional Commit messages.
+- **📈 Auto-Versioning:** Automatically bumps `package.json` version (Major/Minor/Patch) based on code changes.
+- **📜 Auto-Changelog:** Appends meaningful updates to `CHANGELOG.md` automatically.
+- **🚀 Auto-Push:** One command to Commit, Tag, and Push to remote.
 
 ---
 
 ## 🛠️ Installation & Setup
 
-You don't need to run this locally every time. Install it globally once!
-
-### 1. Clone the Repository
+### 1. Clone & Install
 ```bash
 git clone https://github.com/Rilaptra/digester.git
 cd digester
-```
-
-### 2. Install Dependencies
-Make sure you have [Bun](https://bun.sh) installed.
-```bash
 bun install
 ```
 
-### 3. Run Setup Wizard (Windows)
-This command will generate a `.bat` shim and automatically add the tool to your System Environment Variables.
+### 2. Global Setup (Windows)
+Run the setup wizard to add `digest` to your system PATH.
 ```bash
 bun run index.ts setup
 ```
-*> **Note:** Restart your terminal (VSCode/CMD/PowerShell) after setup to apply changes.*
+*> **Note:** Restart your terminal after setup.*
+
+### 3. Configure AI (One-time Setup)
+To use the Auto-Commit features, you need a free Google Gemini API Key.
+```bash
+# Set your API Key
+digest set-key AIzaSyYourKeyHere...
+
+# (Optional) Select specific model
+digest set-model
+```
 
 ---
 
 ## 🎮 Usage
 
-Once installed, use the `digest` command anywhere in your terminal.
-
-### Basic Scan
-Scan the current directory:
+### 1. Digging Context (The Original Feature)
+Generate a markdown digest of your current directory to feed into an LLM.
 ```bash
+# Scan current folder
 digest
-# or
-digest .
-```
 
-### Scan Specific Folder
-Scan a specific project or subdirectory:
-```bash
+# Scan specific path
 digest ./src/components
-# or
-digest E:\Projects\MyCoolApp
 ```
 
-### Generate Config
-Create a default configuration file in the current directory:
+### 2. AI Auto-Maintenance (The Cool Feature)
+Lazy to write commits? Let Digester handle the entire Git lifecycle for this repo.
 ```bash
-digest config
+digest commit
 ```
-
-### Help & Info
-Show the manual and version info:
-```bash
-digest help
-```
+**What happens when you run this?**
+1.  🤖 **Scans Changes:** Checks staged/unstaged files.
+2.  🧠 **AI Analysis:** Sends the diff to Gemini to generate a commit message & changelog.
+3.  🔢 **SemVer Bump:** Decides if it's a Patch, Minor, or Major update.
+4.  📝 **Updates Files:** Modifies `package.json` and `CHANGELOG.md`.
+5.  💾 **Git Action:** Performs `git add`, `git commit`, and `git tag`.
+6.  🚀 **Deploy:** Automatically pushes code & tags to GitHub.
 
 ---
 
-## ⚙️ Configuration (`prompter.config.json`)
+## ⚙️ Configuration
 
-Digester looks for a config file in your target directory. If not found, it uses smart defaults.
-
+### Project Config (`prompter.config.json`)
+Placed in your target project root.
 ```json
 {
-  "ignoredPatterns": [
-    "node_modules", ".git", ".next", "dist", "build", "coverage", ".env"
-  ],
-  "ignoredExts": [
-    ".png", ".jpg", ".zip", ".exe", ".dll", ".lock"
-  ],
+  "ignoredPatterns": ["node_modules", ".git", "dist", ".env"],
   "maxFileSizeKB": 500
 }
 ```
 
----
-
-## 📂 Output Format
-
-The generated file is saved in the `generated/` folder within the tool's directory. It opens automatically upon completion.
-
-**Example Output:**
-
-````markdown
-# Project Name
-
-## Tree
-```
-├── src
-│   ├── index.ts
-│   └── utils.ts
-├── package.json
-└── tsconfig.json
-```
-
-## Code
-
-// --- src/index.ts ---
-```typescript
-console.log("Hello World");
-```
-
-// --- package.json ---
-```json
-{ "name": "demo" }
-```
-````
+### Global Auth (`bin/auth.config.json`)
+Auto-generated when you run `digest set-key`. Stores your API credential securely in the installation folder, not in your project.
 
 ---
 
@@ -141,20 +108,20 @@ console.log("Hello World");
 
 - **Runtime:** Bun (v1.x)
 - **Language:** TypeScript
-- **Pattern:** Object-Oriented Programming (OOP)
-- **Core Modules:**
-  - `Scanner`: Handles recursive directory walking and filtering.
-  - `ConfigManager`: Loads and merges user settings.
-  - `AppController`: Manages CLI dispatching and logic.
+- **AI Engine:** Google Gemini (Flash/Pro)
+- **Modules:**
+  - `Scanner`: Recursive directory walking.
+  - `AIManager`: Bridge to Google Generative AI.
+  - `GitManager`: Wrapper for Git automation.
 
 ---
 
 ## 👤 Author
 
-**Rizqi Lasheva (Rilaptra / Erzy.sh)**  
+**Rizqi Lasheva (Rilaptra)**  
 
 - 🌐 [Website](https://erzysh.vercel.app)
 - 🐙 [GitHub](https://github.com/Rilaptra)
 
 ---
-> Made with ❤️ and ☕
+> *Maintained by AI, Code by Human.* ❤️
