@@ -106,18 +106,82 @@ export class GitManager {
     }
   }
 
-  // 🔥 NEW: AUTO PUSH FUNCTION
-  static async pushToRemote(targetDir: string = SYSTEM.ROOT_DIR) {
+  // --- 🛠️ CORE CHECKS & INIT ---
+
+  static isRepo(dir: string): boolean {
+    return existsSync(join(dir, ".git"));
+  }
+
+  static async init(dir: string): Promise<boolean> {
+    try {
+      Bun.spawnSync(["git", "init"], { cwd: dir });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  static async hasRemote(dir: string): Promise<boolean> {
+    try {
+      const proc = Bun.spawn(["git", "remote"], { cwd: dir });
+      const text = await new Response(proc.stdout).text();
+      return text.trim().length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  static async addRemote(dir: string, url: string): Promise<boolean> {
+    try {
+      Bun.spawnSync(["git", "remote", "add", "origin", url], { cwd: dir });
+      // Verify it worked
+      return await GitManager.hasRemote(dir);
+    } catch {
+      return false;
+    }
+  }
+
+  static async getCurrentBranch(dir: string): Promise<string> {
+    try {
+      const proc = Bun.spawn(["git", "branch", "--show-current"], { cwd: dir });
+      return (await new Response(proc.stdout).text()).trim() || "main";
+    } catch {
+      return "main";
+    }
+  }
+
+  static async createBranch(dir: string, branchName: string): Promise<boolean> {
+    try {
+      // checkout -b
+      const proc = Bun.spawn(["git", "checkout", "-b", branchName], {
+        cwd: dir,
+      });
+      await proc.exited;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // --- 🔥 AUTO PUSH FUNCTION ---
+  static async pushToRemote(
+    targetDir: string = SYSTEM.ROOT_DIR,
+    branchName?: string,
+  ) {
+    const branch = branchName || (await GitManager.getCurrentBranch(targetDir));
     generateLog(
       { type: "info" },
-      chalk.yellow("\n🚀 Pushing to remote (origin)..."),
+      chalk.yellow(`\n🚀 Pushing to remote origin/${branch}...`),
     );
     try {
-      // Push HEAD (current branch) and tags
-      const proc = Bun.spawn(["git", "push", "origin", "HEAD", "--tags"], {
-        cwd: targetDir,
-        stdio: ["inherit", "inherit", "inherit"],
-      });
+      // Push specific branch and tags
+      const proc = Bun.spawn(
+        ["git", "push", "-u", "origin", `${branch}:${branch}`, "--tags"],
+        {
+          cwd: targetDir,
+          stdio: ["inherit", "inherit", "inherit"],
+        },
+      );
       const exitCode = await proc.exited;
 
       if (exitCode === 0) {
@@ -129,7 +193,9 @@ export class GitManager {
       generateLog({ type: "error" }, chalk.red("\n❌ Push Failed."));
       generateLog(
         { type: "info" },
-        chalk.dim("   Check your internet or 'git remote -v' config."),
+        chalk.dim(
+          "   Check your internet, remote permission, or 'git remote -v'.",
+        ),
       );
     }
   }

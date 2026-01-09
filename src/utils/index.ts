@@ -109,3 +109,25 @@ export async function promptSelect(
     });
   });
 }
+
+/**
+ * Prompts user for text input
+ */
+export async function promptText(question: string): Promise<string> {
+  const answer = await new Promise<string>((resolve) => {
+    process.stdout.write(question);
+
+    // Ensure we are in "cooked" mode for text input?
+    // Actually promptSelect puts us in raw mode sometimes.
+    if (process.stdin.setRawMode) {
+      process.stdin.setRawMode(false);
+    }
+    process.stdin.resume();
+
+    process.stdin.once("data", (data) => {
+      process.stdin.pause();
+      resolve(data.toString().trim());
+    });
+  });
+  return answer;
+}

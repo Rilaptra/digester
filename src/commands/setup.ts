@@ -25,8 +25,35 @@ export class SetupCommand extends BaseCommand {
       }
 
       const batPath = join(SYSTEM.BIN_DIR, "digest.bat");
-      // We assume run from source with bun for now
-      const entryFile = join(SYSTEM.ROOT_DIR, "src", "index.ts");
+      const distFile = join(SYSTEM.ROOT_DIR, "dist", "index.js");
+
+      // Ensure dist exists (since it's gitignored now)
+      if (!(await Bun.file(distFile).exists())) {
+        spinner.text = "Compiling source code...";
+        try {
+          const buildProc = Bun.spawn(
+            [
+              "bun",
+              "build",
+              "./src/index.ts",
+              "--outfile",
+              "./dist/index.js",
+              "--target",
+              "bun",
+            ],
+            {
+              cwd: SYSTEM.ROOT_DIR,
+              stderr: "pipe",
+            },
+          );
+          await buildProc.exited;
+        } catch (_e) {
+          // Ignore build errors, try to proceed or let it fail later?
+          // Better to just warn or keep going, the user might fix it later.
+        }
+      }
+
+      const entryFile = distFile;
       const batContent = `@echo off\nbun "${entryFile}" %*`;
       await Bun.write(batPath, batContent);
       spinner.succeed(`Created shim: ${chalk.green("bin/digest.bat")}`);

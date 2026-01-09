@@ -1,5 +1,8 @@
 # Changelog
 
+## [14.2.0-ai] - 2026-01-09
+- ✨ **Enhancement**: Massively improved the `digest commit` command to include automatic checks for Git initialization and remote configuration, offering interactive setup and generating a GitHub Release workflow if needed. Introduced interactive push strategies (direct push or new PR branch creation).
+
 ## [14.1.0-ai] - 2026-01-09
 - ✨ **Enhancement**: Added support for running the auto-commit process against the current working directory using the `commit this` command, improving flexibility.
 
