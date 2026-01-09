@@ -7,15 +7,10 @@ import { SYSTEM } from "../constants/defaults.js";
 import { generateLog } from "../utils/logger.js";
 
 export class GitManager {
-  static async prepareAndGetDiff(): Promise<string> {
+  static async prepareAndGetDiff(
+    targetDir: string = SYSTEM.ROOT_DIR,
+  ): Promise<string> {
     try {
-      // We assume the script is running in the context where we want to run git,
-      // OR we explicitly set CWD to SYSTEM.SCRIPT_DIR if the goal is self-update.
-      // NOTE: The original code used SYSTEM.SCRIPT_DIR (self-update).
-      const targetDir = SYSTEM.ROOT_DIR; // Use ROOT_DIR (project root) instead of SCRIPT_DIR (src/managers/...)
-      // Wait, SYSTEM.SCRIPT_DIR in original was `dirname(import.meta.url)` of index.ts (root).
-      // In new structure, SYSTEM.ROOT_DIR is the root.
-
       const gitDir = join(targetDir, ".git");
 
       if (!existsSync(gitDir)) {
@@ -39,9 +34,12 @@ export class GitManager {
     }
   }
 
-  static async updateVersion(bumpType: string): Promise<string | null> {
+  static async updateVersion(
+    bumpType: string,
+    targetDir: string = SYSTEM.ROOT_DIR,
+  ): Promise<string | null> {
     // Assuming ROOT_DIR is where package.json lives
-    const pkgPath = join(SYSTEM.ROOT_DIR, "package.json");
+    const pkgPath = join(targetDir, "package.json");
     const file = Bun.file(pkgPath);
     if (!(await file.exists())) return null;
 
@@ -74,7 +72,7 @@ export class GitManager {
       await Bun.write(pkgPath, JSON.stringify(pkg, null, 2));
 
       Bun.spawnSync(["git", "add", "package.json"], {
-        cwd: SYSTEM.ROOT_DIR,
+        cwd: targetDir,
       });
       return newVer;
     } catch {
@@ -82,18 +80,21 @@ export class GitManager {
     }
   }
 
-  static async executeCommit(msg: string, tag?: string) {
-    const cwd = SYSTEM.ROOT_DIR;
+  static async executeCommit(
+    msg: string,
+    tag?: string,
+    targetDir: string = SYSTEM.ROOT_DIR,
+  ) {
     try {
       const commitProc = Bun.spawn(["git", "commit", "-m", msg], {
-        cwd,
+        cwd: targetDir,
         stdio: ["inherit", "inherit", "inherit"],
       });
       await commitProc.exited;
 
       if (tag) {
         const tagProc = Bun.spawn(["git", "tag", `v${tag}`], {
-          cwd,
+          cwd: targetDir,
           stdio: ["inherit", "inherit", "inherit"],
         });
         await tagProc.exited;
@@ -106,8 +107,7 @@ export class GitManager {
   }
 
   // 🔥 NEW: AUTO PUSH FUNCTION
-  static async pushToRemote() {
-    const cwd = SYSTEM.ROOT_DIR;
+  static async pushToRemote(targetDir: string = SYSTEM.ROOT_DIR) {
     generateLog(
       { type: "info" },
       chalk.yellow("\n🚀 Pushing to remote (origin)..."),
@@ -115,7 +115,7 @@ export class GitManager {
     try {
       // Push HEAD (current branch) and tags
       const proc = Bun.spawn(["git", "push", "origin", "HEAD", "--tags"], {
-        cwd,
+        cwd: targetDir,
         stdio: ["inherit", "inherit", "inherit"],
       });
       const exitCode = await proc.exited;

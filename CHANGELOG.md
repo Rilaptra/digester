@@ -1,5 +1,8 @@
 # Changelog
 
+## [14.1.0-ai] - 2026-01-09
+- ✨ **Enhancement**: Added support for running the auto-commit process against the current working directory using the `commit this` command, improving flexibility.
+
 ## [14.0.0-ai] - 2026-01-09
 - 🛠️ **Refactor**: Completed architectural migration, implementing a centralized, zero-allocation logger for improved performance, integrating Biome for unified code quality, and updating documentation.
 

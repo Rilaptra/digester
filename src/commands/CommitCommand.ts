@@ -12,9 +12,13 @@ export class CommitCommand extends BaseCommand {
   public description = "AI Auto-Commit, Changelog & Tag";
   public aliases = ["ci"];
 
-  public async execute(_args: string[]): Promise<void> {
-    this.createBox("🤖 AUTO OPS AGENT (SELF-UPDATE)");
-    this.dim(`Target Repo: ${SYSTEM.ROOT_DIR}`);
+  public async execute(args: string[]): Promise<void> {
+    const isThis = args[0] === "this";
+    const targetDir = isThis ? process.cwd() : SYSTEM.ROOT_DIR;
+    const modeLabel = isThis ? "CURRENT DIR" : "SELF-UPDATE";
+
+    this.createBox(`🤖 AUTO OPS AGENT (${modeLabel})`);
+    this.dim(`Target Repo: ${targetDir}`);
 
     const auth = await ConfigManager.getAuth();
     if (!auth.apiKey) {
@@ -23,7 +27,7 @@ export class CommitCommand extends BaseCommand {
     }
 
     const spinner = this.spinner("Checking internal changes...");
-    const diff = await GitManager.prepareAndGetDiff();
+    const diff = await GitManager.prepareAndGetDiff(targetDir);
 
     if (!diff || diff.trim().length === 0) {
       spinner.fail(
@@ -62,13 +66,13 @@ export class CommitCommand extends BaseCommand {
         // 1. Update Version
         let newVer = null;
         if (result.bump !== "none") {
-          newVer = await GitManager.updateVersion(result.bump);
+          newVer = await GitManager.updateVersion(result.bump, targetDir);
           if (newVer)
             this.success(`Updated internal package.json to v${newVer}`);
         }
 
         // 2. Update Changelog
-        const changelogPath = join(SYSTEM.ROOT_DIR, "CHANGELOG.md");
+        const changelogPath = join(targetDir, "CHANGELOG.md");
         let currentContent = "";
         if (await Bun.file(changelogPath).exists()) {
           currentContent = await Bun.file(changelogPath).text();
@@ -94,7 +98,7 @@ export class CommitCommand extends BaseCommand {
         await Bun.write(changelogPath, `${newContent.trim()}\n`);
 
         Bun.spawnSync(["git", "add", "CHANGELOG.md"], {
-          cwd: SYSTEM.ROOT_DIR,
+          cwd: targetDir,
         });
         this.success(`Updated internal CHANGELOG.md`);
 
@@ -102,10 +106,11 @@ export class CommitCommand extends BaseCommand {
         await GitManager.executeCommit(
           result.commitMessage,
           newVer || undefined,
+          targetDir,
         );
 
         // 4. 🔥 AUTO PUSH
-        await GitManager.pushToRemote();
+        await GitManager.pushToRemote(targetDir);
 
         generateLog(
           { type: "success", raw: true },
