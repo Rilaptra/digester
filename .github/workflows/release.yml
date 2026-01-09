@@ -1,0 +1,39 @@
+name: 🚀 Auto Release
+
+on:
+  push:
+    tags:
+      - "v*" # Trigger tiap ada tag v1.0, v1.1, dst
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📝 Extract Changelog from Commit Message
+        id: extract_changelog
+        run: |
+          # Ambil message dari tag commit terakhir
+          TAG_MSG=$(git log -1 --format=%B)
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          echo "$TAG_MSG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: 🎉 Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ env.RELEASE_BODY }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
