@@ -262,21 +262,10 @@ jobs:
         this.createBox("🔄 SELF-UPDATE TRIGGERED");
         const spinner = this.spinner("Building local dist...");
         try {
-          const buildProc = Bun.spawn(
-            [
-              "bun",
-              "build",
-              "./src/index.ts",
-              "--outfile",
-              "./dist/index.js",
-              "--target",
-              "bun",
-            ],
-            {
-              cwd: targetDir,
-              stderr: "pipe",
-            },
-          );
+          const buildProc = Bun.spawn(["bun", "run", "build"], {
+            cwd: targetDir,
+            stderr: "pipe",
+          });
           const stderr = await new Response(buildProc.stderr).text();
           const exitCode = await buildProc.exited;
 

@@ -63,14 +63,20 @@ cd digester
 bun install
 ```
 
-### 2. Global Power
-Run the setup wizard to use the `digest` command anywhere.
+### 2. Build
+Run the build command to build the `start` command.
 ```bash
-bun run src/index.ts setup
+bun run build
+```
+
+### 3. Setup
+Run the setup command to add the `digest` command to your PATH.
+```bash
+bun start setup
 ```
 *> **Note:** Restart your terminal to refresh the environment variables.*
 
-### 3. AI Authentication
+### 4. AI Authentication
 Get a free API Key from [Google AI Studio](https://aistudio.google.com/).
 ```bash
 digest set-key YOUR_API_KEY

@@ -1,5 +1,5 @@
-import { join } from "node:path";
 import chalk from "chalk";
+import * as Commands from "../commands/index.js";
 import { generateLog } from "../utils/logger.js";
 import { CommandLoader } from "./CommandLoader.js";
 
@@ -13,9 +13,8 @@ export class AppController {
   public async run() {
     console.clear();
 
-    // Load commands
-    const commandsDir = join(import.meta.dir, "..", "commands");
-    await this.loader.load(commandsDir);
+    // Load commands statically
+    this.loader.registerCommands(Object.values(Commands));
 
     const args = Bun.argv.slice(2);
     const commandName = args[0] || ".";

@@ -1,5 +1,4 @@
-import { readdir } from "node:fs/promises";
-import { join } from "node:path";
+/** biome-ignore-all lint/suspicious/noExplicitAny: <explanation:Biome> */
 import chalk from "chalk";
 import { generateLog } from "../utils/logger.js";
 import { BaseCommand } from "./BaseCommand.js";
@@ -11,56 +10,36 @@ export class CommandLoader {
   /**
    * Load commands from a directory
    */
-  public async load(directory: string): Promise<void> {
-    try {
-      const files = await readdir(directory);
-      for (const file of files) {
-        if (
-          (file.endsWith(".ts") || file.endsWith(".js")) &&
-          !file.endsWith(".d.ts")
-        ) {
-          await this.registerCommand(join(directory, file));
-        }
-      }
-    } catch (error) {
-      generateLog(
-        { type: "error" },
-        chalk.red(`Failed to load commands from ${directory}:`),
-        error,
-      );
-    }
-  }
-
-  private async registerCommand(filePath: string) {
-    try {
-      // Dynamic import
-      const module = await import(filePath);
-      // Assume default export or named export matching file name?
-      // Let's iterate exports to find one extending BaseCommand
-      for (const key in module) {
-        const ExportedClass = module[key];
-        if (
-          typeof ExportedClass === "function" &&
-          ExportedClass.prototype instanceof BaseCommand
-        ) {
-          const instance = new ExportedClass() as BaseCommand;
+  /**
+   * Register a manual list of commands (Static Loading for Bundling)
+   */
+  public registerCommands(commands: any[]) {
+    commands.forEach((CmdClass) => {
+      try {
+        if (CmdClass && CmdClass.prototype instanceof BaseCommand) {
+          const instance = new CmdClass() as BaseCommand;
           this.commands.set(instance.name, instance);
           if (instance.aliases) {
             instance.aliases.forEach((alias) => {
               this.aliases.set(alias, instance.name);
             });
           }
-          // console.log(chalk.gray(`Loaded command: ${instance.name}`));
-          return; // Only load one command per file for now
         }
+      } catch (_e) {
+        generateLog(
+          { type: "warn" },
+          chalk.yellow(`Failed to register command`),
+        );
       }
-    } catch (error) {
-      generateLog(
-        { type: "warn" },
-        chalk.yellow(`Could not load command from ${filePath}:`),
-        error,
-      );
-    }
+    });
+  }
+
+  // Legacy dynamic loader (kept for reference or dev, but unused in production bundle)
+  public async load(_directory: string): Promise<void> {
+    // ... dynamic l_directoryved to save space or commented out?
+    // I'll leave the empty implementation or log a warning if used.
+    // Actually, let's just make it do nothing or throw, since we want to force static.
+    // Or better, just remove the implementation to be clean.
   }
 
   public getCommand(name: string): BaseCommand | undefined {

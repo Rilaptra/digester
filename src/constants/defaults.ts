@@ -5,10 +5,11 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const isBuilt = __filename.includes("\\dist");
 // Going up one level from src/constants to src, then up to root to find bin/generated
 // Actually, let's keep it relative to the package root.
 // If this file is in src/constants/defaults.ts, then root is ../../
-const ROOT_DIR = join(__dirname, "../../");
+const ROOT_DIR = join(__dirname, isBuilt ? "../" : "../../");
 
 export const SYSTEM = {
   VERSION: "13.0.0-ai",

@@ -31,21 +31,10 @@ export class SetupCommand extends BaseCommand {
       if (!(await Bun.file(distFile).exists())) {
         spinner.text = "Compiling source code...";
         try {
-          const buildProc = Bun.spawn(
-            [
-              "bun",
-              "build",
-              "./src/index.ts",
-              "--outfile",
-              "./dist/index.js",
-              "--target",
-              "bun",
-            ],
-            {
-              cwd: SYSTEM.ROOT_DIR,
-              stderr: "pipe",
-            },
-          );
+          const buildProc = Bun.spawn(["bun", "run", "build"], {
+            cwd: SYSTEM.ROOT_DIR,
+            stderr: "pipe",
+          });
           await buildProc.exited;
         } catch (_e) {
           // Ignore build errors, try to proceed or let it fail later?
@@ -57,7 +46,8 @@ export class SetupCommand extends BaseCommand {
       const batContent = `@echo off\nbun "${entryFile}" %*`;
       await Bun.write(batPath, batContent);
       spinner.succeed(`Created shim: ${chalk.green("bin/digest.bat")}`);
-
+      // console.log(SYSTEM);
+      // return;
       spinner.start("Updating System PATH...");
       const psCommand = `
         $target = "${SYSTEM.BIN_DIR}";

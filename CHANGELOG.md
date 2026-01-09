@@ -1,5 +1,8 @@
 # Changelog
 
+## [14.3.0-ai] - 2026-01-09
+- ✨ **Enhancement**: Transitioned from dynamic command discovery (file system scanning) to static command loading via an auto-generated registry, significantly improving build compatibility and application reliability when bundled.
+
 ## [14.2.0-ai] - 2026-01-09
 - ✨ **Enhancement**: Massively improved the `digest commit` command to include automatic checks for Git initialization and remote configuration, offering interactive setup and generating a GitHub Release workflow if needed. Introduced interactive push strategies (direct push or new PR branch creation).
 
