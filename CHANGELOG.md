@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.8.0-ai] - 2026-01-10
+- ✨ Enhanced the file tree command with more detailed file type icons and colors.
+- 🛠️ Added a folder summary displaying the number of files and top file extensions within each directory (up to 5 extensions).
+- 🎨 Improved color consistency and added support for more languages and file types (e.g., Rust, PowerShell, WASM, TOML).
+- 📦 Added support for archive file types (tar, gz).
+- 📝 Updated documentation and added specialized icons for Civil Engineering/Technical files (DWG, DXF, XLSX, CSV).
+
 ## [14.7.0-ai] - 2026-01-10
 - ✨ Add `tree` command to display project structure with smart folder icons and media support.
 -   Displays a visual tree of the project directory.
