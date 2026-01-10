@@ -71,21 +71,35 @@ export class CommitCommand extends BaseCommand {
       }
     }
 
-    // --- 2.5 Auto-Release Workflow Check ---
+    // --- 2.5 Auto-Release Workflow Check (INTERACTIVE) ---
     const releaseYmlPath = join(
       targetDir,
       ".github",
       "workflows",
       "release.yml",
     );
-    // Cek file async style Bun
+
+    // Cek dulu filenya ada apa nggak
     if (!(await Bun.file(releaseYmlPath).exists())) {
       const createWorkflow = await this.promptYesNo(
         `${chalk.bold("Create GitHub Release Workflow")} (.github/workflows/release.yml)?`,
       );
 
       if (createWorkflow) {
-        const template = `name: Release
+        // 🔥 FITUR BARU: PILIH TIPE WORKFLOW 🔥
+        const workflowType = await this.promptSelect(
+          "📦 Select Release Workflow Type:",
+          [
+            "Standard (Source Code Release Only)",
+            "Binary Build (Cross-Platform Compile + Release)",
+          ],
+        );
+
+        let template = "";
+
+        // TIPE 1: STANDARD (Cuma release source code, ringan)
+        if (workflowType.startsWith("Standard")) {
+          template = `name: Release Source
 on:
   push:
     tags:
@@ -96,16 +110,72 @@ permissions:
 
 jobs:
   release:
+    name: 🚀 Publish Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: Create Release
+      - name: 🎉 Create Release
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
 `;
+        }
+        // TIPE 2: BINARY BUILD (Buat Digester / CLI Tools)
+        else {
+          template = `name: Build & Release Binaries 🚀
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: 🏗️ Build & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: 📦 Install Dependencies
+        run: bun install
+
+      # Build Binary untuk 4 Platform
+      - name: 🪟 Build Windows
+        run: bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile dist/myapp-win-x64.exe
+
+      - name: 🐧 Build Linux
+        run: bun build ./src/index.ts --compile --target=bun-linux-x64 --outfile dist/myapp-linux-x64
+
+      - name: 🍎 Build macOS (Silicon)
+        run: bun build ./src/index.ts --compile --target=bun-darwin-arm64 --outfile dist/myapp-macos-arm64
+
+      - name: 🍎 Build macOS (Intel)
+        run: bun build ./src/index.ts --compile --target=bun-darwin-x64 --outfile dist/myapp-macos-x64
+
+      - name: 🎉 Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/myapp-win-x64.exe
+            dist/myapp-linux-x64
+            dist/myapp-macos-arm64
+            dist/myapp-macos-x64
+          generate_release_notes: true
+`;
+        }
+
         try {
           const { mkdirSync } = await import("node:fs");
           mkdirSync(join(targetDir, ".github", "workflows"), {
@@ -115,7 +185,11 @@ jobs:
           Bun.spawnSync(["git", "add", ".github/workflows/release.yml"], {
             cwd: targetDir,
           });
-          this.success("✅ Created release.yml workflow.");
+
+          const label = workflowType.startsWith("Standard")
+            ? "Standard"
+            : "Binary-Build";
+          this.success(`✅ Created '${label}' release workflow.`);
         } catch (e) {
           this.warn(
             `Failed to create release workflow: ${(e as Error).message}`,

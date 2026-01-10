@@ -1,5 +1,11 @@
 # Changelog
 
+## [15.0.0-ai] - 2026-01-10
+- ✨ Introducing interactive workflow selection for release generation!
+- 🚀 Added support for cross-platform binary builds (Windows, Linux, macOS) using Bun.
+- 🛠️ Refactored release workflow to allow choosing between a standard source code release and a binary build release.
+- 📝 Updated release workflow file name and description for clarity.
+
 ## [14.8.0-ai] - 2026-01-10
 - ✨ Enhanced the file tree command with more detailed file type icons and colors.
 - 🛠️ Added a folder summary displaying the number of files and top file extensions within each directory (up to 5 extensions).
