@@ -1,5 +1,8 @@
 # Changelog
 
+## [14.6.0-ai] - 2026-01-10
+- ✨ **Feature**: Improved changelog formatting to support multiline entries with bullet points. Updated AI prompt to allow more flexible changelog formats and provide clearer instructions.
+
 ## [14.5.0-ai] - 2026-01-10
 - ✨ **Feature**: Enhanced project name detection from git config and improved scan output with relative paths and project names.
 

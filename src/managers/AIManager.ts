@@ -41,17 +41,22 @@ export class AIManager {
       throw new Error("API Key missing. Run 'digest set-key <KEY>' first.");
     const model = auth.model || "gemini-1.5-flash";
 
-    // 🔥 PENTING: Prompt harus dipertegas buat Gemma karena dia gak punya 'JSON Mode'
+    // 🔥 UPDATE PROMPT: Bebasin format changelog
     const prompt = `
         You are a Senior DevOps Engineer. Analyze the following 'git diff'. 
-        You MUST return a valid JSON object ONLY. Do not wrap it in markdown code blocks. Do not add explanation.
+        You MUST return a valid JSON object ONLY. Do not wrap it in markdown code blocks.
         
         JSON Structure:
         {
           "commitMessage": "type(scope): description",
-          "changelog": "Emoji **Type**: Description",
+          "changelog": "String. Can be a single summary line OR multiple lines with bullet points if there are many changes.",
           "bump": "major" | "minor" | "patch" | "none"
         }
+
+        Rules for 'changelog':
+        - Use emojis relevant to the change (✨, 🐛, 🚀, 🛠️).
+        - If multiple distinct files/features changed, return a multi-line string (separated by newline \\n).
+        - Format it clearly so it looks good in a markdown list.
 
         DIFF:
         ${diff.substring(0, 30000)} ${
@@ -60,9 +65,7 @@ export class AIManager {
         `;
 
     try {
-      // 🕵️‍♂️ Cek apakah ini Gemini atau bukan
       const isGemini = model.toLowerCase().includes("gemini");
-
       const bodyPayload: {
         contents: [{ parts: [{ text: string }] }];
         generationConfig?: { responseMimeType: string };
@@ -70,7 +73,6 @@ export class AIManager {
         contents: [{ parts: [{ text: prompt }] }],
       };
 
-      // ⚡ Only enable Native JSON Mode for Gemini
       if (isGemini) {
         bodyPayload.generationConfig = { responseMimeType: "application/json" };
       }
@@ -93,26 +95,21 @@ export class AIManager {
           };
         }[];
         error?: { message: string };
-      };
-
-      // Error handling lebih detail
+      }; // Cast any biar cepet, logic error handle sama
       if (data.error)
         throw new Error(`${data.error.message} (Model: ${model})`);
 
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error("Empty response from AI");
 
-      // 🧹 CLEANER: Gemma suka ngasih ```json ... ```, kita sikat!
-      // Regex ini bakal hapus ```json, ```, dan whitespace di awal/akhir
       const cleanJson = text
-        .replace(/^```json\s*/g, "") // Hapus ```json di awal
-        .replace(/^```\s*/g, "") // Hapus ``` biasa di awal
-        .replace(/\s*```$/g, "") // Hapus ``` di akhir
+        .replace(/^```json\s*/g, "")
+        .replace(/^```\s*/g, "")
+        .replace(/\s*```$/g, "")
         .trim();
 
       return JSON.parse(cleanJson);
     } catch (e) {
-      // Feedback biar user tau kalau JSON-nya ancur
       throw new Error(
         `AI Generation failed: ${e instanceof Error ? e.message : e}`,
       );

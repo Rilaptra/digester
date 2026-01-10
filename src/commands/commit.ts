@@ -184,7 +184,24 @@ jobs:
       const versionHeader = newVer
         ? `## [${newVer}] - ${date}`
         : `### [${date}]`;
-      const entry = `\n${versionHeader}\n- ${result.changelog}\n`;
+      // 🔥 LOGIC FORMATTING BARU (MULTILINE SUPPORT)
+      // Pecah string dari AI berdasarkan enter (\n)
+      const rawLines = result.changelog.split("\n");
+
+      // Format setiap baris
+      const formattedLines = rawLines
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0) // Buang baris kosong
+        .map((line) => {
+          // Kalau AI udah ngasih bullet (- atau *), biarin aja
+          if (line.startsWith("-") || line.startsWith("*")) {
+            return line;
+          }
+          // Kalau polos, kita kasih bullet biar rapi
+          return `- ${line}`;
+        });
+
+      const entry = `\n${versionHeader}\n${formattedLines.join("\n")}\n`;
 
       const header = "# Changelog\n";
       let newContent = "";
@@ -199,7 +216,6 @@ jobs:
       Bun.spawnSync(["git", "add", "CHANGELOG.md"], {
         cwd: targetDir,
       });
-      // this.success(`Updated CHANGELOG.md`);
 
       // Commit & Tag
       await GitManager.executeCommit(
