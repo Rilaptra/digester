@@ -1,6 +1,5 @@
-// --- src/commands/scan.ts ---
 import { existsSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, relative } from "node:path";
 import chalk from "chalk";
 import Table from "cli-table3";
 import { SYSTEM } from "../constants/defaults.js";
@@ -19,11 +18,9 @@ export class ScanCommand extends BaseCommand {
   public async execute(args: string[]): Promise<void> {
     let targetPaths: string[] = [];
 
-    // 1. Cek argumen dari CLI dulu
     if (args.length > 0) {
       targetPaths = args;
     } else {
-      // 2. Kalau kosong, masuk mode Interaktif
       const mode = await this.promptSelect(
         chalk.cyan("🎯  Select Scan Mode:"),
         [
@@ -33,7 +30,6 @@ export class ScanCommand extends BaseCommand {
       );
 
       if (mode.startsWith("Custom")) {
-        // Minta input manual dipisah spasi
         const input = await UtilFunctions.promptText(
           chalk.yellow(
             "👉 Enter paths (space separated, e.g. 'src/utils tests'): ",
@@ -56,8 +52,30 @@ export class ScanCommand extends BaseCommand {
     await this.scanTargets(targetPaths);
   }
 
+  // 🔥 NEW HELPER: Detect Project Name from Git or Folder
+  private async getProjectName(root: string): Promise<string> {
+    try {
+      // 1. Coba baca dari .git/config (Paling Akurat)
+      const gitConfigPath = join(root, ".git", "config");
+      const gitConfigFile = Bun.file(gitConfigPath);
+
+      if (await gitConfigFile.exists()) {
+        const text = await gitConfigFile.text();
+        // Regex buat ambil nama repo dari URL (e.g. github.com/user/my-repo.git -> my-repo)
+        const match = text.match(/url\s*=\s*.*\/([^/]+?)(\.git)?\s*$/m);
+        if (match?.[1]) {
+          return match[1];
+        }
+      }
+    } catch {
+      // Ignore error, fallback ke folder name
+    }
+
+    // 2. Fallback: Nama folder tempat command dijalankan
+    return basename(root);
+  }
+
   private async scanTargets(paths: string[]) {
-    // Container buat gabungin hasil scan dari banyak folder
     const aggregatedStats: ScanStats = {
       files: [],
       tree: [],
@@ -69,12 +87,15 @@ export class ScanCommand extends BaseCommand {
     };
 
     const startTime = performance.now();
-    this.log(chalk.cyan(`\n⚡ PROMPTER v${SYSTEM.VERSION}`));
-    
-    // Load config sekali aja dari root (asumsi monorepo/single project)
-    const rootConfig = await ConfigManager.load(process.cwd());
+    const projectRoot = process.cwd();
 
-    // Loop setiap path yang diminta user
+    // 🔥 Panggil Helper di sini
+    const projectName = await this.getProjectName(projectRoot);
+    const rootConfig = await ConfigManager.load(projectRoot);
+
+    this.log(chalk.cyan(`\n⚡ PROMPTER v${SYSTEM.VERSION}`));
+    this.dim(`   Project: ${chalk.bold(projectName)}`); // Kasih feedback ke user
+
     for (const path of paths) {
       const targetDir = UtilFunctions.resolvePath(path);
       if (!targetDir) {
@@ -82,22 +103,37 @@ export class ScanCommand extends BaseCommand {
         continue;
       }
 
-      // Spinner aesthetic
-      const spinner = this.spinner(`Scanning ${chalk.bold(path)}...`);
-      
-      // Jalanin Scanner yang udah ada
-      const stats = await Scanner.run(targetDir, rootConfig);
-      
-      spinner.succeed(`Scanned ${path} (${stats.files.length} files)`);
+      // Hitung path relative untuk Tree & Header File
+      const dirNameRelativeToRoot = relative(projectRoot, targetDir);
 
-      // Merge Logic (High Performance)
+      const spinner = this.spinner(
+        `Scanning ${chalk.bold(dirNameRelativeToRoot || ".")}...`,
+      );
+
+      const stats = await Scanner.run(targetDir, rootConfig);
+      spinner.succeed(
+        `Scanned ${dirNameRelativeToRoot || "Root"} (${stats.files.length} files)`,
+      );
+
+      // 🛠️ Update RelPath agar sesuai Project Root
+      stats.files.forEach((f) => {
+        f.relPath = relative(projectRoot, f.path);
+      });
       aggregatedStats.files.push(...stats.files);
-      aggregatedStats.tree.push(...stats.tree); // Tree digabung aja
+
+      // 🛠️ Tree Visual Enhancement
+      if (dirNameRelativeToRoot && dirNameRelativeToRoot !== "") {
+        aggregatedStats.tree.push(
+          chalk.bold.blue(`📂 ${dirNameRelativeToRoot}/`),
+        );
+      }
+      aggregatedStats.tree.push(...stats.tree);
+
+      // Merge Counters
       aggregatedStats.skippedCount += stats.skippedCount;
       aggregatedStats.skippedSize += stats.skippedSize;
       aggregatedStats.totalSize += stats.totalSize;
 
-      // Merge Extension Stats
       for (const [ext, data] of Object.entries(stats.extStats)) {
         if (!aggregatedStats.extStats[ext]) {
           aggregatedStats.extStats[ext] = { count: 0, size: 0 };
@@ -114,28 +150,24 @@ export class ScanCommand extends BaseCommand {
       return;
     }
 
-    // Tampilkan Report
     this.displayReport(aggregatedStats);
 
-    // Konfirmasi Tulis File
     const shouldWrite = await this.promptYesNo(
       `${chalk.bgCyan.black(" ACTION ")} Write Digest File? ${chalk.dim("(Y/n)")} `,
     );
-    
+
     if (!shouldWrite) {
       this.dim("Cancelled");
       return;
     }
 
-    // Nama file output dinamis
-    const label = paths.length === 1 && paths[0] !== "." 
-      ? basename(paths[0]) 
-      : "Multi_Scope";
-      
-    await this.writeOutput(aggregatedStats, label);
+    // 🔥 Pake projectName yang udah kita dapet di awal
+    await this.writeOutput(aggregatedStats, projectName);
   }
 
+  // Display report ga berubah
   private displayReport(stats: ScanStats) {
+    // (Kode sama persis seperti sebelumnya)
     generateLog({ type: "info", raw: true }, "");
     const table = new Table({
       head: [chalk.white("Metric"), chalk.white("Value")],
@@ -181,10 +213,13 @@ export class ScanCommand extends BaseCommand {
     generateLog({ type: "info", raw: true }, "");
   }
 
-  private async writeOutput(stats: ScanStats, label: string) {
-    const outPath = join(SYSTEM.OUT_DIR, `DIGEST_${label}_${Date.now()}.md`);
-    
-    // Pastikan folder output ada (Lazy create)
+  private async writeOutput(stats: ScanStats, projectName: string) {
+    // 🔥 Nama file output sekarang konsisten: DIGEST_NamaRepo_Timestamp
+    const outPath = join(
+      SYSTEM.OUT_DIR,
+      `DIGEST_${projectName}_${Date.now()}.md`,
+    );
+
     if (!(await Bun.file(SYSTEM.OUT_DIR).exists())) {
       const fs = await import("node:fs/promises");
       if (!existsSync(SYSTEM.OUT_DIR))
@@ -195,24 +230,22 @@ export class ScanCommand extends BaseCommand {
       highWaterMark: SYSTEM.CHUNK_SIZE,
     });
 
-    // Write Header & Tree
+    // 🔥 Judul Markdown juga ngikutin nama repo
     writer.write(
-      `# Project Digest: ${label}\n\n## Structure\n\`\`\`\n${stats.tree.join(
+      `# Project Digest: ${projectName}\n\n## Structure\n\`\`\`\n${stats.tree.join(
         "\n",
       )}\n\`\`\`\n\n## Code Content\n`,
     );
 
     const writeSpin = this.spinner("Writing to disk...");
     let done = 0;
-    
-    // Chunk processing buat hemat memori (Batching)
+
     for (let i = 0; i < stats.files.length; i += SYSTEM.CONCURRENCY) {
       const chunk = stats.files.slice(i, i + SYSTEM.CONCURRENCY);
-      
+
       const contents = await Promise.all(
         chunk.map(async (f) => {
           try {
-            // Baca file on-demand biar RAM ga meledak nyimpen string gede
             const text = await Bun.file(f.path).text();
             return `\n// --- ${f.relPath} ---\n\`\`\`${f.ext}\n${text}\n\`\`\`\n`;
           } catch {
@@ -220,15 +253,15 @@ export class ScanCommand extends BaseCommand {
           }
         }),
       );
-      
+
       for (const c of contents) writer.write(c);
-      
+
       done += chunk.length;
       writeSpin.text = `Writing ${Math.round(
         (done / stats.files.length) * 100,
       )}%`;
     }
-    
+
     writer.end();
     writeSpin.succeed(chalk.green(`Saved: ${basename(outPath)}`));
 

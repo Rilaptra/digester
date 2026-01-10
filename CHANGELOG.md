@@ -1,5 +1,8 @@
 # Changelog
 
+## [14.5.0-ai] - 2026-01-10
+- ✨ **Feature**: Enhanced project name detection from git config and improved scan output with relative paths and project names.
+
 ## [14.4.0-ai] - 2026-01-10
 - ✨ **Feature**: Enhanced the scan command to include interactive mode selection and support for scanning multiple target paths simultaneously.
 ⚡️ **Performance**: Optimized Git diff generation by enabling zero context lines (`-U0`) and filtering metadata, significantly reducing token consumption for AI analysis.
