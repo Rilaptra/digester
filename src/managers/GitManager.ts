@@ -7,7 +7,7 @@ import { SYSTEM } from "../constants/defaults.js";
 import { generateLog } from "../utils/logger.js";
 
 export class GitManager {
-  static async prepareAndGetDiff(
+   static async prepareAndGetDiff(
     targetDir: string = SYSTEM.ROOT_DIR,
   ): Promise<string> {
     try {
@@ -20,19 +20,42 @@ export class GitManager {
             `⚠️  Git not found in tool dir (${targetDir}). Initializing...`,
           ),
         );
-        // Bun.spawnSync for initialization
         Bun.spawnSync(["git", "init"], { cwd: targetDir });
       }
 
+      // Add changes to staging
       Bun.spawnSync(["git", "add", "."], { cwd: targetDir });
 
-      const proc = Bun.spawn(["git", "diff", "--cached"], { cwd: targetDir });
-      const text = await new Response(proc.stdout).text();
-      return text;
-    } catch (_e) {
+      // 🔥 OPTIMIZATION START HERE
+      // Pake -U0 biar context lines-nya 0 (hemat token parah)
+      const proc = Bun.spawn(["git", "diff", "--cached", "-U0"], { 
+        cwd: targetDir 
+      });
+      
+      const rawDiff = await new Response(proc.stdout).text();
+
+      // Filter: Cuma ambil Header File, Tambahan (+), dan Hapus (-)
+      // Kita buang metadata git kayak "index abc..def" atau "@@ -1,0 ..."
+      const cleanDiff = rawDiff
+        .split("\n")
+        .filter((line) => {
+          // Keep file headers biar AI tau ini file apa
+          if (line.startsWith("diff --git")) return true;
+          // Keep additions & deletions
+          if (line.startsWith("+") && !line.startsWith("+++")) return true;
+          if (line.startsWith("-") && !line.startsWith("---")) return true;
+          return false;
+        })
+        .join("\n");
+
+      return cleanDiff;
+      // 🔥 OPTIMIZATION END
+      
+    } catch {
       return "";
     }
   }
+
 
   static async updateVersion(
     bumpType: string,

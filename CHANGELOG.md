@@ -1,5 +1,9 @@
 # Changelog
 
+## [14.4.0-ai] - 2026-01-10
+- ✨ **Feature**: Enhanced the scan command to include interactive mode selection and support for scanning multiple target paths simultaneously.
+⚡️ **Performance**: Optimized Git diff generation by enabling zero context lines (`-U0`) and filtering metadata, significantly reducing token consumption for AI analysis.
+
 ## [14.3.1-ai] - 2026-01-09
 - ⚙️ **Refactor**: Load system version dynamically from `package.json` instead of using a hardcoded constant in system defaults.
 

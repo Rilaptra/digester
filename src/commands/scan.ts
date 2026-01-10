@@ -1,3 +1,4 @@
+// --- src/commands/scan.ts ---
 import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import chalk from "chalk";
@@ -7,69 +8,131 @@ import { BaseCommand } from "../core/BaseCommand.js";
 import { Scanner } from "../core/Scanner.js";
 import { ConfigManager } from "../managers/ConfigManager.js";
 import type { ScanStats } from "../types/index.js";
-import * as UtilFunctions from "../utils/index.js"; // Importing as namespace to be safe or use named imports if possible.
+import * as UtilFunctions from "../utils/index.js";
 import { generateLog } from "../utils/logger.js";
 
 export class ScanCommand extends BaseCommand {
-  public name = "scan"; // We might handle '.' in loader or alias
-  public description = "Scan a directory and generate a digest";
+  public name = "scan";
+  public description = "Scan directory and generate digest";
   public aliases = [".", "run"];
 
   public async execute(args: string[]): Promise<void> {
-    // args[0] might be the path if the user typed `digest scan <path>`
-    // or if they typed `digest .`, args might be empty if we parse it right?
-    // In AppController, it passed `this.command` as path if default.
-    // Here, if invoked as `digest scan path`, args[0] is path.
-    // If invoked as `digest .`, alias match `scan`, args[0] is empty?
-    // We'll treat the first argument as path, or default to current.
+    let targetPaths: string[] = [];
 
-    // However, the previous logic was: `digest <path>` -> `scanDirectory(path)`
-    // So if I type `digest .` -> command is `.`.
-    // If I type `digest src` -> command is `src`.
-    // The CommandLoader needs to handle the "default command" fallback if no command matches.
-    // I will implement "ScanCommand" to handle the scanning logic.
-    // The AppController will invoke this command if no other command matches.
+    // 1. Cek argumen dari CLI dulu
+    if (args.length > 0) {
+      targetPaths = args;
+    } else {
+      // 2. Kalau kosong, masuk mode Interaktif
+      const mode = await this.promptSelect(
+        chalk.cyan("🎯  Select Scan Mode:"),
+        [
+          "Full Scan (Current Directory)",
+          "Custom Paths (Specific Folders/Files)",
+        ],
+      );
 
-    const path = args.length > 0 ? args[0] : ".";
-    await this.scanDirectory(path);
+      if (mode.startsWith("Custom")) {
+        // Minta input manual dipisah spasi
+        const input = await UtilFunctions.promptText(
+          chalk.yellow(
+            "👉 Enter paths (space separated, e.g. 'src/utils tests'): ",
+          ),
+        );
+        targetPaths = input
+          .split(" ")
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0);
+
+        if (targetPaths.length === 0) {
+          this.warn("No paths entered. Defaulting to current directory.");
+          targetPaths = ["."];
+        }
+      } else {
+        targetPaths = ["."];
+      }
+    }
+
+    await this.scanTargets(targetPaths);
   }
 
-  private async scanDirectory(path: string) {
-    const targetDir = UtilFunctions.resolvePath(path);
-    if (!targetDir) {
-      this.error(`Directory not found -> "${path}"`);
-      process.exit(1);
-    }
+  private async scanTargets(paths: string[]) {
+    // Container buat gabungin hasil scan dari banyak folder
+    const aggregatedStats: ScanStats = {
+      files: [],
+      tree: [],
+      skippedCount: 0,
+      skippedSize: 0,
+      totalSize: 0,
+      extStats: {},
+      duration: "0",
+    };
 
-    const repoName = basename(targetDir);
+    const startTime = performance.now();
     this.log(chalk.cyan(`\n⚡ PROMPTER v${SYSTEM.VERSION}`));
+    
+    // Load config sekali aja dari root (asumsi monorepo/single project)
+    const rootConfig = await ConfigManager.load(process.cwd());
 
-    const spinner = this.spinner(`Analyzing ${chalk.bold(repoName)}...`);
-    const config = await ConfigManager.load(targetDir);
-    const statsCode = await Scanner.run(targetDir, config); // Scanner.run might return ScanStats?
-    // Checking AppController: const stats = await Scanner.run(targetDir, config);
-    // Assuming Scanner.run returns ScanStats.
+    // Loop setiap path yang diminta user
+    for (const path of paths) {
+      const targetDir = UtilFunctions.resolvePath(path);
+      if (!targetDir) {
+        this.warn(`⚠️  Skipping invalid path: "${path}"`);
+        continue;
+      }
 
-    spinner.stop();
+      // Spinner aesthetic
+      const spinner = this.spinner(`Scanning ${chalk.bold(path)}...`);
+      
+      // Jalanin Scanner yang udah ada
+      const stats = await Scanner.run(targetDir, rootConfig);
+      
+      spinner.succeed(`Scanned ${path} (${stats.files.length} files)`);
 
-    const stats = statsCode as unknown as ScanStats; // Cast if needed or trust TS
+      // Merge Logic (High Performance)
+      aggregatedStats.files.push(...stats.files);
+      aggregatedStats.tree.push(...stats.tree); // Tree digabung aja
+      aggregatedStats.skippedCount += stats.skippedCount;
+      aggregatedStats.skippedSize += stats.skippedSize;
+      aggregatedStats.totalSize += stats.totalSize;
 
-    if (stats.files.length === 0) {
-      this.error(`No valid files found in ${targetDir}`);
-      process.exit(1);
+      // Merge Extension Stats
+      for (const [ext, data] of Object.entries(stats.extStats)) {
+        if (!aggregatedStats.extStats[ext]) {
+          aggregatedStats.extStats[ext] = { count: 0, size: 0 };
+        }
+        aggregatedStats.extStats[ext].count += data.count;
+        aggregatedStats.extStats[ext].size += data.size;
+      }
     }
 
-    this.displayReport(stats);
+    aggregatedStats.duration = (performance.now() - startTime).toFixed(0);
 
+    if (aggregatedStats.files.length === 0) {
+      this.error("❌ No valid files found in selected targets.");
+      return;
+    }
+
+    // Tampilkan Report
+    this.displayReport(aggregatedStats);
+
+    // Konfirmasi Tulis File
     const shouldWrite = await this.promptYesNo(
-      `${chalk.bgCyan.black(" ACTION ")} Write File? ${chalk.dim("(Y/n)")} `,
+      `${chalk.bgCyan.black(" ACTION ")} Write Digest File? ${chalk.dim("(Y/n)")} `,
     );
+    
     if (!shouldWrite) {
       this.dim("Cancelled");
       return;
     }
 
-    await this.writeOutput(stats, repoName);
+    // Nama file output dinamis
+    const label = paths.length === 1 && paths[0] !== "." 
+      ? basename(paths[0]) 
+      : "Multi_Scope";
+      
+    await this.writeOutput(aggregatedStats, label);
   }
 
   private displayReport(stats: ScanStats) {
@@ -91,6 +154,7 @@ export class ScanCommand extends BaseCommand {
           stats.skippedSize,
         )})`,
       ],
+      [chalk.dim("Duration"), `${stats.duration}ms`],
     );
     generateLog({ type: "info", raw: true }, table.toString());
 
@@ -117,8 +181,10 @@ export class ScanCommand extends BaseCommand {
     generateLog({ type: "info", raw: true }, "");
   }
 
-  private async writeOutput(stats: ScanStats, repoName: string) {
-    const outPath = join(SYSTEM.OUT_DIR, `DIGEST_${repoName}_${Date.now()}.md`);
+  private async writeOutput(stats: ScanStats, label: string) {
+    const outPath = join(SYSTEM.OUT_DIR, `DIGEST_${label}_${Date.now()}.md`);
+    
+    // Pastikan folder output ada (Lazy create)
     if (!(await Bun.file(SYSTEM.OUT_DIR).exists())) {
       const fs = await import("node:fs/promises");
       if (!existsSync(SYSTEM.OUT_DIR))
@@ -128,33 +194,41 @@ export class ScanCommand extends BaseCommand {
     const writer = Bun.file(outPath).writer({
       highWaterMark: SYSTEM.CHUNK_SIZE,
     });
+
+    // Write Header & Tree
     writer.write(
-      `# ${repoName}\n\n## Tree\n\`\`\`\n${stats.tree.join(
+      `# Project Digest: ${label}\n\n## Structure\n\`\`\`\n${stats.tree.join(
         "\n",
-      )}\n\`\`\`\n\n## Code\n`,
+      )}\n\`\`\`\n\n## Code Content\n`,
     );
 
-    const writeSpin = this.spinner("Writing...");
+    const writeSpin = this.spinner("Writing to disk...");
     let done = 0;
+    
+    // Chunk processing buat hemat memori (Batching)
     for (let i = 0; i < stats.files.length; i += SYSTEM.CONCURRENCY) {
       const chunk = stats.files.slice(i, i + SYSTEM.CONCURRENCY);
+      
       const contents = await Promise.all(
         chunk.map(async (f) => {
           try {
-            return `\n// --- ${f.relPath} ---\n\`\`\`${f.ext}\n${await Bun.file(
-              f.path,
-            ).text()}\n\`\`\`\n`;
+            // Baca file on-demand biar RAM ga meledak nyimpen string gede
+            const text = await Bun.file(f.path).text();
+            return `\n// --- ${f.relPath} ---\n\`\`\`${f.ext}\n${text}\n\`\`\`\n`;
           } catch {
-            return "";
+            return `\n// --- ${f.relPath} (Error Reading File) ---\n`;
           }
         }),
       );
+      
       for (const c of contents) writer.write(c);
+      
       done += chunk.length;
       writeSpin.text = `Writing ${Math.round(
         (done / stats.files.length) * 100,
       )}%`;
     }
+    
     writer.end();
     writeSpin.succeed(chalk.green(`Saved: ${basename(outPath)}`));
 
