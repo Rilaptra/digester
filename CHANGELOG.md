@@ -1,5 +1,15 @@
 # Changelog
 
+## [14.7.0-ai] - 2026-01-10
+- ✨ Add `tree` command to display project structure with smart folder icons and media support.
+-   Displays a visual tree of the project directory.
+-   Uses icons for different folder types (src, core, utils, etc.).
+-   Highlights files with appropriate icons and colors based on their extensions.
+-   Supports limiting the depth of the tree.
+-   Includes auto-depth detection and prompting for depth input.
+-   Ignores files and folders based on configuration.
+-   Includes a build step before commit to ensure the latest version is committed.
+
 ## [14.6.0-ai] - 2026-01-10
 - ✨ **Feature**: Improved changelog formatting to support multiline entries with bullet points. Updated AI prompt to allow more flexible changelog formats and provide clearer instructions.
 

@@ -15,10 +15,17 @@ export class CommitCommand extends BaseCommand {
 
   public async execute(args: string[]): Promise<void> {
     const isThis = args[0] === "this";
+    // Jika 'this', targetnya CWD. Jika kosong, targetnya ROOT_DIR (Repo Digester sendiri)
     const targetDir = isThis ? process.cwd() : SYSTEM.ROOT_DIR;
     const modeLabel = isThis ? "CURRENT DIR" : "SELF-UPDATE";
 
     this.createBox(`🤖 AUTO OPS AGENT (${modeLabel})`);
+
+    // Safety Check: Pastikan targetDir valid
+    if (!targetDir) {
+      this.error("❌ Target directory is undefined. Check SYSTEM.ROOT_DIR.");
+      process.exit(1);
+    }
     this.dim(`Target Repo: ${targetDir}`);
 
     // --- 1. Git Initialization Check ---
@@ -71,6 +78,7 @@ export class CommitCommand extends BaseCommand {
       "workflows",
       "release.yml",
     );
+    // Cek file async style Bun
     if (!(await Bun.file(releaseYmlPath).exists())) {
       const createWorkflow = await this.promptYesNo(
         `${chalk.bold("Create GitHub Release Workflow")} (.github/workflows/release.yml)?`,
@@ -171,7 +179,7 @@ jobs:
         if (newVer) this.success(`Updated package.json to v${newVer}`);
       }
 
-      // Update Changelog
+      // Update Changelog (Logic Multiline Support)
       const changelogPath = join(targetDir, "CHANGELOG.md");
       let currentContent = "";
       if (await Bun.file(changelogPath).exists()) {
@@ -184,25 +192,19 @@ jobs:
       const versionHeader = newVer
         ? `## [${newVer}] - ${date}`
         : `### [${date}]`;
-      // 🔥 LOGIC FORMATTING BARU (MULTILINE SUPPORT)
-      // Pecah string dari AI berdasarkan enter (\n)
-      const rawLines = result.changelog.split("\n");
 
-      // Format setiap baris
+      const rawLines = result.changelog.split("\n");
       const formattedLines = rawLines
         .map((line) => line.trim())
-        .filter((line) => line.length > 0) // Buang baris kosong
+        .filter((line) => line.length > 0)
         .map((line) => {
-          // Kalau AI udah ngasih bullet (- atau *), biarin aja
           if (line.startsWith("-") || line.startsWith("*")) {
             return line;
           }
-          // Kalau polos, kita kasih bullet biar rapi
           return `- ${line}`;
         });
 
       const entry = `\n${versionHeader}\n${formattedLines.join("\n")}\n`;
-
       const header = "# Changelog\n";
       let newContent = "";
       if (currentContent.includes(header)) {
@@ -217,14 +219,59 @@ jobs:
         cwd: targetDir,
       });
 
-      // Commit & Tag
+      // --- 🔥 NEW FEATURE: AUTO-BUILD (Before Commit) ---
+      // Logic: Build hanya dijalankan jika mode Self-Update (!isThis)
+      // Jadi kalau 'digest commit this', dia SKIP langkah ini.
+      if (!isThis) {
+        this.createBox("🏗️  AUTO-BUILD PIPELINE");
+        const buildSpinner = this.spinner("Compiling Digester binary...");
+
+        try {
+          // Kita jalanin 'bun run build' sesuai script di package.json
+          // Pastikan cwd-nya adalah SYSTEM.ROOT_DIR
+          const buildProc = Bun.spawn(["bun", "run", "build"], {
+            cwd: targetDir, // Harus di root digester
+            stderr: "pipe",
+          });
+
+          const exitCode = await buildProc.exited;
+          const stderr = await new Response(buildProc.stderr).text();
+
+          if (exitCode === 0) {
+            buildSpinner.succeed("Build success! (dist/index.js updated)");
+
+            // Jangan lupa 'git add dist' karena file dist berubah
+            Bun.spawnSync(["git", "add", "dist"], { cwd: targetDir });
+          } else {
+            buildSpinner.fail(`Build failed:\n${stderr}`);
+
+            const ignoreBuild = await this.promptYesNo(
+              chalk.red("Build failed. Continue commit anyway?"),
+            );
+            if (!ignoreBuild) {
+              this.error("Process aborted due to build failure.");
+              process.exit(1);
+            }
+          }
+        } catch (error) {
+          buildSpinner.fail(
+            `Build execution error: ${(error as Error).message}`,
+          );
+          // Optional: Abort or Continue logic here
+        }
+      } else {
+        // Feedback visual bahwa build di-skip karena mode 'Current Dir'
+        this.dim("ℹ️  Skipping auto-build (Target is external directory).");
+      }
+
+      // --- Commit & Tag ---
       await GitManager.executeCommit(
         result.commitMessage,
         newVer || undefined,
         targetDir,
       );
 
-      // --- 5. Push Strategy (Robustness) ---
+      // --- 5. Push Strategy ---
       const pushStrategy = await this.promptSelect(
         "🚀 How should we push these changes?",
         [
@@ -252,7 +299,7 @@ jobs:
             spinnerBranch.fail(
               "Failed to create branch. Pushing to current instead.",
             );
-            await GitManager.pushToRemote(targetDir); // Fallback
+            await GitManager.pushToRemote(targetDir);
           } else {
             spinnerBranch.succeed(`Switched to branch '${cleanName}'`);
             await GitManager.pushToRemote(targetDir, cleanName);
@@ -270,32 +317,6 @@ jobs:
         { type: "success", raw: true },
         chalk.bgGreen.black("\n 🎉 ALL SET! "),
       );
-
-      // --- 6. Digester Self-Update (Auto-Build) ---
-      // If we are committing the Digester repo itself, rebuild dist so the local 'digest' command is updated.
-      const isDigesterRepo = targetDir === SYSTEM.ROOT_DIR; // Simple check, can be more robust if needed
-      if (isDigesterRepo) {
-        this.createBox("🔄 SELF-UPDATE TRIGGERED");
-        const spinner = this.spinner("Building local dist...");
-        try {
-          const buildProc = Bun.spawn(["bun", "run", "build"], {
-            cwd: targetDir,
-            stderr: "pipe",
-          });
-          const stderr = await new Response(buildProc.stderr).text();
-          const exitCode = await buildProc.exited;
-
-          if (exitCode === 0) {
-            spinner.succeed(
-              "Digester updated successfully! (dist/index.js rebuilt)",
-            );
-          } else {
-            spinner.fail(`Build failed:\n${stderr}`);
-          }
-        } catch (error) {
-          spinner.fail(`Build error: ${(error as Error).message}`);
-        }
-      }
     } catch (e) {
       spinner.fail(chalk.red(`AI Error: ${(e as Error).message}`));
     }

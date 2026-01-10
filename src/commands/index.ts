@@ -9,3 +9,4 @@ export * from "./scan.js";
 export * from "./set-key.js";
 export * from "./set-model.js";
 export * from "./setup.js";
+export * from "./tree.js";
