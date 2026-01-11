@@ -50,8 +50,17 @@ export class AIManager {
         {
           "commitMessage": "type(scope): description",
           "changelog": "String. Multi-line string with bullet points.",
-          "bump": "major" | "minor" | "patch" | "none"
+          "bump": "major" | "minor" | "patch" | "none",
+          "checkResult": {
+            "isSafe": boolean,
+            "message": "Status message or warning about secrets found. Empty if safe."
+          }
         }
+
+        Rules for 'checkResult':
+        - Scan the DIFF for accidental leaks of secrets (e.g., API keys, passwords, private keys, .env values, tokens).
+        - If any secret is found, set 'isSafe' to false and provide a descriptive warning in 'message'.
+        - If the changes look safe, set 'isSafe' to true.
 
         Rules for 'changelog':
         - EVERY line MUST start with a relevant emoji (e.g., ✨, 🚀, 🛠️, 📝, 📦, 🎨, ⚡️, ⚙️, 📖, 📜, 🏷️, 🧹, 🐛).

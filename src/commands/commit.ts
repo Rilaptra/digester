@@ -233,6 +233,26 @@ jobs:
         `   ${chalk.yellow("Log")}     : ${result.changelog}\n`,
       );
 
+      // --- 🔥 NEW FEATURE: SECRET CHECK ---
+      if (result.checkResult && !result.checkResult.isSafe) {
+        generateLog(
+          { type: "warn", raw: true },
+          chalk.bgRed.white.bold(" 🛡️  SECURITY WARNING "),
+        );
+        generateLog(
+          { type: "warn", raw: true },
+          `   ${chalk.red(result.checkResult.message)}\n`,
+        );
+
+        const proceed = await this.promptYesNo(
+          `${chalk.bold("SENSITIVE DATA DETECTED.")} Continue anyway?`,
+        );
+        if (!proceed) {
+          this.error("Process aborted for security reasons.");
+          return;
+        }
+      }
+
       const confirm = await this.promptYesNo(
         `${chalk.bgBlue.black(" EXECUTE ")} Commit these changes? ${chalk.dim(
           "(Y/n)",

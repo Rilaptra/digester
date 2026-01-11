@@ -1,5 +1,12 @@
 # Changelog
 
+## [15.3.0-ai] - 2026-01-11
+- ✨ Introduce a new `check` command to scan staged changes for potential secret leaks.
+- 🚀 Implement a secret check during the commit process to warn users before committing sensitive data.
+- 🛠️ Integrate with an AI manager to analyze diffs and identify potential secrets.
+- 📝 Add a `SecretCheckResult` interface to define the structure of the secret check result.
+- ⚙️ Enhance the commit process to prompt users for confirmation if secrets are detected, preventing accidental commits of sensitive information.
+
 ## [15.2.0-ai] - 2026-01-11
 - ✨ Introduce pre-push scripts to run checks/builds before pushing.
 - 🚀 Added functionality to load and execute pre-push scripts defined in the project's configuration.

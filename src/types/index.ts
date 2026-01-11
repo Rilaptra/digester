@@ -20,8 +20,14 @@ export interface AuthConfig {
   model?: string;
 }
 
+export interface SecretCheckResult {
+  isSafe: boolean;
+  message: string;
+}
+
 export interface AICommitResponse {
   commitMessage: string;
   changelog: string;
   bump: "major" | "minor" | "patch" | "none";
+  checkResult?: SecretCheckResult;
 }

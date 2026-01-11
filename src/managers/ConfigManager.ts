@@ -42,7 +42,7 @@ export class ConfigManager {
         if (Array.isArray(user.prePushScripts)) {
           final.prePushScripts = user.prePushScripts;
         }
-      } catch (_e) {
+      } catch {
         generateLog(
           { type: "warn" },
           chalk.yellow("  ⚠️  Config error (JSON Invalid), using defaults."),
@@ -106,7 +106,6 @@ export class ConfigManager {
     for (const d of dirsToScan) {
       const dirPath = join(targetDir, d);
       try {
-        const _dir = Bun.file(dirPath);
         // Bun.file on a directory doesn't give us listing easily.
         // We might need to use node:fs or Bun.spawn to find files if we want to stay "Bun native" but efficient.
         // Let's use a simple approach with node:fs for now as it's robust.
