@@ -1,5 +1,13 @@
 # Changelog
 
+## [15.2.0-ai] - 2026-01-11
+- ✨ Introduce pre-push scripts to run checks/builds before pushing.
+- 🚀 Added functionality to load and execute pre-push scripts defined in the project's configuration.
+- 📝 If no scripts are configured, the user is prompted to select scripts or TypeScript files to run.
+- ⚙️ Implemented retry logic for failed scripts, allowing the user to retry, continue, or abort the process.
+- 📦 Added `prePushScripts` to the project configuration (defaults to an empty array).
+- 🛠️ Added helper functions to list available scripts from `package.json` and TypeScript files in common directories.
+
 ## [15.1.0-ai] - 2026-01-11
 - ✨ Introduce the `source` command (aliases: `src`, `srccode`, `self`) to scan and digest the tool's own source code.
 - 🛠️ Implemented source code scanning logic using `Scanner` and `ConfigManager`.

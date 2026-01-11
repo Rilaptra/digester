@@ -293,18 +293,103 @@ jobs:
         cwd: targetDir,
       });
 
-      // --- 🔥 NEW FEATURE: AUTO-BUILD (Before Commit) ---
-      // Logic: Build hanya dijalankan jika mode Self-Update (!isThis)
-      // Jadi kalau 'digest commit this', dia SKIP langkah ini.
-      if (!isThis) {
-        this.createBox("🏗️  AUTO-BUILD PIPELINE");
+      // --- 🔥 NEW FEATURE: PRE-PUSH SCRIPTS (Before Push Strategy) ---
+      if (isThis) {
+        const config = await ConfigManager.load(targetDir);
+        let scriptsToRun = config.prePushScripts || [];
+
+        // If no scripts configured, ask user if they want to run any
+        if (scriptsToRun.length === 0) {
+          const availableScripts =
+            await ConfigManager.getAvailableScripts(targetDir);
+          const availableTS = await ConfigManager.listTSFiles(targetDir);
+
+          if (availableScripts.length > 0 || availableTS.length > 0) {
+            const options = [
+              ...availableScripts.map((s) => `[script] ${s}`),
+              ...availableTS.map((t) => `[ts-file] ${t}`),
+            ];
+
+            const selected = await this.promptMultiSelect(
+              chalk.cyan(
+                "\n🔍 Pre-push: Select scripts/TS files to run (optional):",
+              ),
+              options,
+            );
+
+            if (selected.length > 0) {
+              scriptsToRun = selected;
+            }
+          }
+        }
+
+        if (scriptsToRun.length > 0) {
+          this.createBox("🚀 PRE-PUSH PIPELINE");
+
+          for (const item of scriptsToRun) {
+            const isTS = item.startsWith("[ts-file]") || item.endsWith(".ts");
+            const cleanItem = item
+              .replace("[script] ", "")
+              .replace("[ts-file] ", "");
+
+            let retry = true;
+            while (retry) {
+              const scriptSpinner = this.spinner(
+                `Running: ${chalk.bold(cleanItem)}...`,
+              );
+
+              try {
+                const cmd = isTS
+                  ? ["bun", cleanItem]
+                  : ["bun", "run", cleanItem];
+                const proc = Bun.spawn(cmd, {
+                  cwd: targetDir,
+                  stderr: "pipe",
+                });
+
+                const exitCode = await proc.exited;
+                const stderr = await new Response(proc.stderr).text();
+
+                if (exitCode === 0) {
+                  scriptSpinner.succeed(`Success: ${cleanItem}`);
+                  retry = false;
+                } else {
+                  scriptSpinner.fail(
+                    `Failed: ${cleanItem}\n${chalk.red(stderr)}`,
+                  );
+
+                  const action = await this.promptSelect(
+                    chalk.red(`Script '${cleanItem}' failed. What next?`),
+                    ["Retry", "Continue anyway", "Abort"],
+                  );
+
+                  if (action === "Abort") {
+                    this.error("Process aborted by user.");
+                    process.exit(1);
+                  } else if (action === "Continue anyway") {
+                    retry = false;
+                  }
+                  // if "Retry", retry remains true and loop continues
+                }
+              } catch (error) {
+                scriptSpinner.fail(
+                  `Execution error: ${(error as Error).message}`,
+                );
+                const exit = await this.promptYesNo("Abort process?");
+                if (exit) process.exit(1);
+                retry = false;
+              }
+            }
+          }
+        }
+      } else {
+        // --- EXISTING: SELF-UPDATE AUTO-BUILD ---
+        this.createBox("🏗️  AUTO-BUILD PIPELINE (SELF-UPDATE)");
         const buildSpinner = this.spinner("Compiling Digester binary...");
 
         try {
-          // Kita jalanin 'bun run build' sesuai script di package.json
-          // Pastikan cwd-nya adalah SYSTEM.ROOT_DIR
           const buildProc = Bun.spawn(["bun", "run", "build"], {
-            cwd: targetDir, // Harus di root digester
+            cwd: targetDir,
             stderr: "pipe",
           });
 
@@ -312,30 +397,17 @@ jobs:
           const stderr = await new Response(buildProc.stderr).text();
 
           if (exitCode === 0) {
-            buildSpinner.succeed("Build success! (dist/index.js updated)");
-
-            // Jangan lupa 'git add dist' karena file dist berubah
+            buildSpinner.succeed("Build success!");
             Bun.spawnSync(["git", "add", "dist"], { cwd: targetDir });
           } else {
             buildSpinner.fail(`Build failed:\n${stderr}`);
-
-            const ignoreBuild = await this.promptYesNo(
-              chalk.red("Build failed. Continue commit anyway?"),
-            );
-            if (!ignoreBuild) {
-              this.error("Process aborted due to build failure.");
+            if (!(await this.promptYesNo(chalk.red("Continue anyway?")))) {
               process.exit(1);
             }
           }
         } catch (error) {
-          buildSpinner.fail(
-            `Build execution error: ${(error as Error).message}`,
-          );
-          // Optional: Abort or Continue logic here
+          buildSpinner.fail(`Error: ${(error as Error).message}`);
         }
-      } else {
-        // Feedback visual bahwa build di-skip karena mode 'Current Dir'
-        this.dim("ℹ️  Skipping auto-build (Target is external directory).");
       }
 
       // --- Commit & Tag ---

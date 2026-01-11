@@ -74,6 +74,53 @@ export async function promptYesNo(question: string): Promise<boolean> {
 }
 
 /**
+ * Prompts user to select multiple from a list
+ */
+export async function promptMultiSelect(
+  question: string,
+  options: string[],
+): Promise<string[]> {
+  generateLog({ type: "info", raw: true }, question);
+  options.forEach((opt, idx) => {
+    generateLog(
+      { type: "info", raw: true },
+      `  ${chalk.cyan(idx + 1)}. ${opt}`,
+    );
+  });
+  process.stdout.write(
+    chalk.yellow(
+      "  > Select numbers (comma separated, e.g. 1,2,5) or leave empty: ",
+    ),
+  );
+
+  if (process.stdin.setRawMode) {
+    process.stdin.setRawMode(false);
+  }
+  process.stdin.resume();
+
+  return new Promise((resolve) => {
+    process.stdin.once("data", (data) => {
+      const input = data.toString().trim();
+      process.stdin.pause();
+
+      if (!input) {
+        resolve([]);
+        return;
+      }
+
+      const indices = input
+        .split(",")
+        .map((x) => parseInt(x.trim(), 10) - 1)
+        .filter(
+          (idx) => !Number.isNaN(idx) && idx >= 0 && idx < options.length,
+        );
+
+      resolve(indices.map((idx) => options[idx]));
+    });
+  });
+}
+
+/**
  * Prompts user to select from a list
  */
 export async function promptSelect(

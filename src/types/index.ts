@@ -2,6 +2,7 @@ export interface AppConfig {
   ignoredPatterns: Set<string>;
   ignoredExts: Set<string>;
   maxFileSize: number;
+  prePushScripts?: string[];
 }
 
 export interface ScanStats {

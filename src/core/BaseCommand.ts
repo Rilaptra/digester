@@ -79,4 +79,11 @@ export abstract class BaseCommand {
   ): Promise<string> {
     return Utils.promptSelect(question, options);
   }
+
+  protected async promptMultiSelect(
+    question: string,
+    options: string[],
+  ): Promise<string[]> {
+    return Utils.promptMultiSelect(question, options);
+  }
 }

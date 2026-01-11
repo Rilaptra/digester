@@ -92,4 +92,5 @@ export const DEFAULT_CONFIG = {
     ".tsbuildinfo",
   ],
   maxFileSizeKB: 500,
+  prePushScripts: [],
 };
