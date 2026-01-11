@@ -1,5 +1,14 @@
 # Changelog
 
+## [15.1.0-ai] - 2026-01-11
+- ✨ Introduce the `source` command (aliases: `src`, `srccode`, `self`) to scan and digest the tool's own source code.
+- 🛠️ Implemented source code scanning logic using `Scanner` and `ConfigManager`.
+- 📝 Added functionality to generate a detailed report including file statistics, token estimates, and skipped files.
+- 📦 Implemented the ability to write the digest report to a markdown file in the `out` directory.
+- ⚡️ Improved error handling and user feedback with informative messages and spinners.
+- ⚙️ Added support for resolving paths and handling invalid paths gracefully.
+- 📖 Enhanced report display with a CLI table and distribution of file extensions.
+
 ## [15.0.0-ai] - 2026-01-10
 - ✨ Introducing interactive workflow selection for release generation!
 - 🚀 Added support for cross-platform binary builds (Windows, Linux, macOS) using Bun.

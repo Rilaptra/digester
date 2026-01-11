@@ -41,7 +41,7 @@ export class AIManager {
       throw new Error("API Key missing. Run 'digest set-key <KEY>' first.");
     const model = auth.model || "gemini-1.5-flash";
 
-    // 🔥 UPDATE PROMPT: Bebasin format changelog
+    // 🔥 UPDATE PROMPT: Strict emoji enforcement and conventional style
     const prompt = `
         You are a Senior DevOps Engineer. Analyze the following 'git diff'. 
         You MUST return a valid JSON object ONLY. Do not wrap it in markdown code blocks.
@@ -49,14 +49,19 @@ export class AIManager {
         JSON Structure:
         {
           "commitMessage": "type(scope): description",
-          "changelog": "String. Can be a single summary line OR multiple lines with bullet points if there are many changes.",
+          "changelog": "String. Multi-line string with bullet points.",
           "bump": "major" | "minor" | "patch" | "none"
         }
 
         Rules for 'changelog':
-        - Use emojis relevant to the change (✨, 🐛, 🚀, 🛠️).
-        - If multiple distinct files/features changed, return a multi-line string (separated by newline \\n).
-        - Format it clearly so it looks good in a markdown list.
+        - EVERY line MUST start with a relevant emoji (e.g., ✨, 🚀, 🛠️, 📝, 📦, 🎨, ⚡️, ⚙️, 📖, 📜, 🏷️, 🧹, 🐛).
+        - Use emojis consistent with the project's history in CHANGELOG.md.
+        - Format: "- [Emoji] [Description]"
+        - If multiple files/features changed, describe them in detail across multiple lines (separated by \\n).
+        - Do not be generic; explain WHAT changed and WHY.
+
+        Rules for 'commitMessage':
+        - Follow Conventional Commits (e.g., feat: ..., fix: ..., refactor: ...).
 
         DIFF:
         ${diff.substring(0, 30000)} ${

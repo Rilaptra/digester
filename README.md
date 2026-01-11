@@ -25,6 +25,7 @@ In v13, we've optimized every byte and cycle, ensuring it runs smoothly even on 
 - **🌳 Architecture Tree:** Generates clean, visual directory structures.
 - **🛡️ Smart Filtering:** Automatically respects `.gitignore` and skips heavy binary/lock files.
 - **📝 LLM-Ready Output:** Formats your entire project into a single markdown file with syntax highlighting.
+- **🔍 Self-Digestion:** Quickly scan the tool's own source code using the \`source\` command.
 
 ### 🤖 AI Auto-Ops (Self-Maintenance)
 - **✍️ Auto-Commit:** AI analyzes your `git diff` to write meaningful Conventional Commits.
@@ -50,6 +51,7 @@ In v13, we've optimized every byte and cycle, ensuring it runs smoothly even on 
 | `digest open` | - | Open the Digester source code directory. |
 | `digest set-key` | `auth` | Save your Google Gemini API Key. |
 | `digest set-model` | `model` | Select between different Gemini models (Flash/Pro). |
+| `digest source` | `src`, `self` | Quick digest of the project's own source code. |
 | `digest setup` | - | Global installation wizard (Add to PATH). |
 
 ---
