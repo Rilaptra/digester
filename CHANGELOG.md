@@ -1,5 +1,12 @@
 # Changelog
 
+## [16.1.0-ai] - 2026-01-14
+- ✨ Added a `gen` command to scaffold new commands and managers quickly.
+- 📝 Implemented a `update` command for self-updating Digester to the latest version via Git.
+- 🛠️ Refactored the command registry generation script for improved reliability and clarity.
+- ⚙️ Enhanced the command generation process with better naming conventions and file structure.
+- 📦 Updated dependencies and build process for improved performance and stability.
+
 ## [16.0.0-ai] - 2026-01-14
 - ✨ Added `git` command to clone, scan, and digest remote Git repositories.
 - 🚀 Implemented shallow cloning for faster repository processing.

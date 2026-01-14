@@ -17,7 +17,8 @@
     "build": "bun run codegen && bun build ./src/index.ts --outfile ./dist/index.js --target bun",
     "b": "bun run codegen && bun build ./src/index.ts --outfile ./dist/index.js --target bun",
     "dev": "bun run codegen && bun src/index.ts",
-    "start": "bun dist/index.js"
+    "start": "bun dist/index.js",
+    "setup": "bun run build && bun src/index.ts setup"
   },
-  "version": "16.0.0-ai"
+  "version": "16.1.0-ai"
 }
