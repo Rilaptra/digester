@@ -1,5 +1,14 @@
 # Changelog
 
+## [16.0.0-ai] - 2026-01-14
+- ✨ Added `git` command to clone, scan, and digest remote Git repositories.
+- 🚀 Implemented shallow cloning for faster repository processing.
+- 🛠️ Added dependency tracing functionality with the `trace` command.
+- 📝 Improved error handling and cleanup procedures for temporary directories.
+- 📦 Refactored file explorer and dependency tracer for better usability.
+- ⚙️ Enhanced path resolution and security checks to prevent accidental access to sensitive files.
+- 🐛 Fixed potential issues with resolving .js files when source is .ts.
+
 ## [15.4.0-ai] - 2026-01-14
 - ✨ Introduced `promptSelectV2` for interactive grid-based selection menus.
 - 📝 Added support for configurable column layouts (1, 2, or 3 columns) in `promptSelectV2`.

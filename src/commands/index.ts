@@ -4,6 +4,7 @@
 export * from "./check.js";
 export * from "./commit.js";
 export * from "./config.js";
+export * from "./git.js";
 export * from "./help.js";
 export * from "./open.js";
 export * from "./scan.js";
@@ -12,4 +13,5 @@ export * from "./set-model.js";
 export * from "./setup.js";
 export * from "./src.js";
 export * from "./test.js";
+export * from "./trace.js";
 export * from "./tree.js";
