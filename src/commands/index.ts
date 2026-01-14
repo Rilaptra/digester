@@ -11,4 +11,5 @@ export * from "./set-key.js";
 export * from "./set-model.js";
 export * from "./setup.js";
 export * from "./src.js";
+export * from "./test.js";
 export * from "./tree.js";

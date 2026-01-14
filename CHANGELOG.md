@@ -1,5 +1,13 @@
 # Changelog
 
+## [15.4.0-ai] - 2026-01-14
+- ✨ Introduced `promptSelectV2` for interactive grid-based selection menus.
+- 📝 Added support for configurable column layouts (1, 2, or 3 columns) in `promptSelectV2`.
+- 🎮 Implemented a demo command (`test`) showcasing the grid menu with TypeScript, JavaScript, Rust, Go, Python, C++, Zig, and Odin options.
+- ⚡️ Enhanced navigation within the grid using arrow keys.
+- 🛠️ Improved rendering logic for the grid menu, including clearing previous lines and handling cursor visibility.
+- 🧹 Refactored logger context styling for better readability.
+
 ## [15.3.0-ai] - 2026-01-11
 - ✨ Introduce a new `check` command to scan staged changes for potential secret leaks.
 - 🚀 Implement a secret check during the commit process to warn users before committing sensitive data.

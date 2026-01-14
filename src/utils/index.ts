@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process"; // Bun.spawn is async, for openFile we often want fire-and-forget or specific detach
 import { existsSync } from "node:fs"; // Bun.file().exists() is async, keep sync for simple checks if needed, but prefer async where possible
 import { isAbsolute, resolve } from "node:path";
+import { emitKeypressEvents } from "node:readline";
 import chalk from "chalk";
 import { generateLog } from "./logger.js";
 
@@ -154,6 +155,171 @@ export async function promptSelect(
         resolve(options[idx]);
       }
     });
+  });
+}
+
+// --- src/utils/index.ts ---
+// ... imports (emitKeypressEvents, chalk, generateLog, dll) ...
+
+/**
+ * Interactive Select Menu V2 (Grid Support + 4-Way Nav)
+ * @param columns Number of columns (default: 1). Use 2 or 3 for compact view.
+ */
+export async function promptSelectV2(
+  question: string,
+  options: string[],
+  config: {
+    allowCustom?: boolean;
+    columns?: number; // 🔥 Fitur Baru: Tentukan jumlah kolom
+  } = {},
+): Promise<string> {
+  const { allowCustom = false, columns = 1 } = config;
+
+  // Prep Options
+  const choices = allowCustom ? [...options, "Other..."] : options;
+  let index = 0;
+
+  // 📐 Layout Calculation
+  // Hitung panjang string terpanjang untuk nentuin lebar kolom
+  const maxLabelLength = Math.max(...choices.map((c) => c.length));
+  // Tambah buffer untuk pointer (❯ ) dan spasi antar kolom
+  const colWidth = maxLabelLength + 5;
+  // Hitung total baris yang dibutuhkan
+  const totalRows = Math.ceil(choices.length / columns);
+
+  // Setup Raw Mode
+  if (process.stdin.setRawMode) process.stdin.setRawMode(true);
+  process.stdin.resume();
+  emitKeypressEvents(process.stdin);
+
+  process.stdout.write("\x1B[?25l"); // Hide Cursor
+
+  // --- RENDER FUNCTION ---
+  const render = (firstRender = false) => {
+    if (!firstRender) {
+      // Clear previous lines (Jumlah baris + 1 title)
+      process.stdout.write(`\x1B[${totalRows + 1}A`);
+    }
+
+    process.stdout.write(`${chalk.cyan(`? ${question}`)}\n`);
+
+    // Loop per Baris
+    for (let row = 0; row < totalRows; row++) {
+      let lineOutput = "";
+
+      // Loop per Kolom di baris tersebut
+      for (let col = 0; col < columns; col++) {
+        const itemIndex = row * columns + col; // Rumus konversi Grid ke Array Flat
+
+        if (itemIndex < choices.length) {
+          const isSelected = itemIndex === index;
+          const label = choices[itemIndex];
+
+          // Pointer logic
+          const pointer = isSelected ? chalk.cyan("❯") : " ";
+
+          // Text styling
+          const text = isSelected ? chalk.cyan.bold(label) : chalk.dim(label);
+
+          // 🔥 PADDING MAGIC
+          // Kita harus hitung 'visual length' tanpa ANSI codes buat padding yang pas
+          // Tapi cara simpel: padEnd string aslinya DULU sebelum dikasih warna
+          // ATAU (Better): Print fixed width block.
+
+          // Trik hemat: manual spacing padding
+          const padding = " ".repeat(colWidth - label.length - 2);
+
+          lineOutput += `${pointer} ${text}${padding}`;
+        }
+      }
+      // Print baris ini lalu clear sisa line ke kanan (\x1B[K)
+      process.stdout.write(` ${lineOutput}\x1B[K\n`);
+    }
+  };
+
+  render(true);
+
+  return new Promise((resolve) => {
+    const handleKey = async (
+      _ch: string,
+      key: { name: string; ctrl: boolean },
+    ) => {
+      if (key.ctrl && key.name === "c") {
+        process.stdout.write("\x1B[?25h");
+        process.exit(0);
+      }
+
+      // --- LOGIKA NAVIGASI GRID ---
+      switch (key.name) {
+        case "left":
+          // Mundur 1 (Wrap ke akhir list jika di awal)
+          index = (index - 1 + choices.length) % choices.length;
+          render();
+          break;
+
+        case "right":
+          // Maju 1 (Wrap ke awal list jika di akhir)
+          index = (index + 1) % choices.length;
+          render();
+          break;
+
+        case "up":
+          // Lompat ke atas (Kurangi index sebanyak jumlah kolom)
+          if (index - columns >= 0) {
+            index -= columns;
+          } else {
+            // Kalau di baris paling atas, wrap ke elemen paling bawah di kolom yang sama (optional)
+            // Atau logic simple: wrap ke paling bawah index terakhir
+            const target = index + (totalRows - 1) * columns;
+            index = target < choices.length ? target : target - columns;
+            // Fallback kalau loncatnya kejauhan (karena baris terakhir gak penuh)
+            if (index >= choices.length) index = choices.length - 1;
+          }
+          render();
+          break;
+
+        case "down":
+          // Lompat ke bawah (Tambah index sebanyak jumlah kolom)
+          if (index + columns < choices.length) {
+            index += columns;
+          } else {
+            // Kalau di baris paling bawah, wrap ke atas (index % columns)
+            index = index % columns;
+          }
+          render();
+          break;
+
+        case "return":
+        case "enter": {
+          process.stdin.removeListener("keypress", handleKey);
+          if (process.stdin.setRawMode) process.stdin.setRawMode(false);
+          process.stdin.pause();
+
+          // Cleanup UI
+          process.stdout.write(`\x1B[${totalRows + 1}A`);
+          process.stdout.write("\x1B[0J");
+          process.stdout.write("\x1B[?25h");
+
+          const selection = choices[index];
+          generateLog(
+            { type: "success", raw: true },
+            `${chalk.cyan(`? ${question}`)} ${chalk.green(selection)}`,
+          );
+
+          if (allowCustom && selection === "Other...") {
+            const custom = await promptText(
+              chalk.yellow("   👉 Enter value: "),
+            );
+            resolve(custom || "Other");
+          } else {
+            resolve(selection);
+          }
+          break;
+        }
+      }
+    };
+
+    process.stdin.on("keypress", handleKey);
   });
 }
 

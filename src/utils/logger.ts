@@ -96,9 +96,9 @@ export function generateLog(options: LogOptions, ...message: any[]) {
   let context = "";
   if (!noContext) {
     const contextRaw = eventName ?? system ?? getCaller();
-    context = (
-      eventName ? chalk.green.bold(contextRaw) : chalk.magenta.bold(contextRaw)
-    ).padEnd(25);
+    context = eventName
+      ? chalk.green.bold(contextRaw)
+      : chalk.magenta.bold(contextRaw);
   }
 
   let logBody = "";
