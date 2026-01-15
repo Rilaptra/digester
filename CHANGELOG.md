@@ -1,5 +1,15 @@
 # Changelog
 
+## [16.4.0-ai] - 2026-01-15
+- ✨ Introduced a new `Select` component for interactive menu creation.
+- 📝 Added builder methods (`title`, `columns`, `add`, `separator`) for configuring the `Select` component.
+- 🚀 Implemented a runner engine (`run`) to handle user input and selection.
+- 🎨 Enhanced rendering with icons, colors, and descriptions for improved visual clarity.
+- 🛠️ Added support for grid layouts with configurable column counts.
+- ⚙️ Implemented disabled states for options with visual indicators.
+- 🐛 Fixed logic for icon display, prioritizing user-defined icons over disabled indicators.
+- 📦 Exported the `Select` component from `src/utils/index.ts` for easy access.
+
 ## [16.3.0-ai] - 2026-01-15
 - ✨ Introduce `smartOpenFolder` function for improved folder opening experience.
 - 🍎🐧 On macOS and Linux, the function utilizes the standard `open` or `xdg-open` commands.

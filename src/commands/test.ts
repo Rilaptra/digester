@@ -1,60 +1,69 @@
-// --- src/commands/test.ts ---
 import chalk from "chalk";
 import { BaseCommand } from "../core/BaseCommand.js";
-import { promptSelectV2 } from "../utils/index.js";
+import { Select } from "../utils/tui/Select.js"; // 🔥 IMPORT BARU
 
 export class TestCommand extends BaseCommand {
   public name = "test";
-  public description = "Demo of promptSelectV2 interactive GRID menu";
-  public aliases = ["demo", "tui"];
+  public description = "Demo of the new SELECT Class";
+  public aliases = ["demo"];
 
   public async execute(_args: string[]): Promise<void> {
-    this.createBox("🎮 TUI GRID SYSTEM");
+    this.createBox("🎮 SELECT COMPONENT DEMO");
 
-    // TEST 1: GRID MODE (2 Kolom)
-    this.log(chalk.bold.white("\n--- Test 1: Grid Layout (2 Cols) ---"));
-    const lang = await promptSelectV2(
-      "Choose your weapon:",
-      [
-        "TypeScript",
-        "JavaScript",
-        "Rust",
-        "Go",
-        "Python",
-        "C++",
-        "Zig",
-        "Odin",
-      ],
-      { columns: 2, allowCustom: true }, // 🔥 2 Kolom
-    );
-    this.success(`Selected: ${lang}`);
+    // --- CASE 1: Selecting Action (Generic Object) ---
+    interface Action {
+      id: string;
+      risk: "LOW" | "HIGH";
+    }
 
-    // TEST 2: COMPACT MODE (3 Kolom)
-    this.log(chalk.bold.white("\n--- Test 2: Compact Grid (3 Cols) ---"));
-    const framework = await promptSelectV2(
-      "Pick a framework:",
-      [
-        "Next.js",
-        "Nuxt",
-        "SvelteKit",
-        "Remix",
-        "Astro",
-        "Qwik",
-        "SolidStart",
-        "Gatsby",
-        "Vite",
-      ],
-      { columns: 3 }, // 🔥 3 Kolom
-    );
-    this.success(`Selected: ${framework}`);
+    const action = await new Select<Action>()
+      .title("What should we do next?")
+      .add(
+        "Deploy to Production",
+        { id: "deploy", risk: "HIGH" },
+        {
+          desc: "Push code to vercel",
+          icon: "🚀",
+          color: chalk.green,
+        }
+      )
+      .add(
+        "Run Tests",
+        { id: "test", risk: "LOW" },
+        {
+          desc: "Run comprehensive suite",
+          icon: "🧪",
+          color: chalk.cyan,
+        }
+      )
+      .separator() // 🔥 Pemisah visual
+      .add(
+        "Delete Database",
+        { id: "nuke", risk: "HIGH" },
+        {
+          desc: "Do not touch this",
+          icon: "💀",
+          color: chalk.red,
+          // disabled: true, // 🔥 Disabled state
+        }
+      )
+      .run();
 
-    // TEST 3: STANDARD LIST (Default)
-    this.log(chalk.bold.white("\n--- Test 3: Standard List (Fallback) ---"));
-    const mode = await promptSelectV2(
-      "Confirm action:",
-      ["Deploy to Prod", "Deploy to Staging", "Cancel"],
-      { columns: 1 }, // Default
-    );
-    this.info(`Action: ${mode}`);
+    this.success(`Selected ID: ${action.id} (Risk: ${action.risk})`);
+
+    // --- CASE 2: Grid Selection (Simple String) ---
+    const lang = await new Select<string>()
+      .title("Pick your poison:")
+      .columns(3) // 🔥 Grid Mode
+      .add("TypeScript", "ts", { icon: "🟦", color: chalk.blueBright })
+      .add("JavaScript", "js", { icon: "🟨", color: chalk.yellow })
+      .add("Rust", "rs", { icon: "🦀", color: chalk.red })
+      .add("Go", "go", { icon: "🐹", color: chalk.cyan })
+      .add("Python", "py", { icon: "🐍", color: chalk.green })
+      .add("C++", "cpp", { icon: "𝓒", color: chalk.blue })
+      .add("Zig", "zig", { icon: "⚡", color: chalk.blue })
+      .run();
+
+    this.success(`Language: ${lang.toUpperCase()}`);
   }
 }
