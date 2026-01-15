@@ -270,6 +270,6 @@ export class ScanCommand extends BaseCommand {
     writeSpin.succeed(chalk.green(`Saved: ${basename(outPath)}`));
 
     this.dim("   📂 Opening output directory...");
-    UtilFunctions.openFile(SYSTEM.OUT_DIR);
+    UtilFunctions.smartOpenFolder(SYSTEM.OUT_DIR);
   }
 }

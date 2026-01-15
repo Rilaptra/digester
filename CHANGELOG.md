@@ -1,5 +1,14 @@
 # Changelog
 
+## [16.3.0-ai] - 2026-01-15
+- ✨ Introduce `smartOpenFolder` function for improved folder opening experience.
+- 🍎🐧 On macOS and Linux, the function utilizes the standard `open` or `xdg-open` commands.
+- 🪟 On Windows, the function now intelligently checks if the folder is already open.
+- If open, it brings the existing window to the front.
+- If not open, it opens a new instance of the folder.
+- 🛠️ This enhancement provides a smoother user experience by avoiding redundant folder openings on Windows.
+- 📝 Added logging to warn if the path to open does not exist.
+
 ## [16.2.1-ai] - 2026-01-15
 - ✨ Refactor: Updated prompts to use `promptSelectV2` for consistent column handling.
 - 📝 Refactor: Enhanced error messages during release workflow creation for better clarity.
