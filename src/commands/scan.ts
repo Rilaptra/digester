@@ -21,19 +21,19 @@ export class ScanCommand extends BaseCommand {
     if (args.length > 0) {
       targetPaths = args;
     } else {
-      const mode = await this.promptSelect(
+      const mode = await this.promptSelectV2(
         chalk.cyan("🎯  Select Scan Mode:"),
         [
           "Full Scan (Current Directory)",
           "Custom Paths (Specific Folders/Files)",
-        ],
+        ]
       );
 
       if (mode.startsWith("Custom")) {
         const input = await UtilFunctions.promptText(
           chalk.yellow(
-            "👉 Enter paths (space separated, e.g. 'src/utils tests'): ",
-          ),
+            "👉 Enter paths (space separated, e.g. 'src/utils tests'): "
+          )
         );
         targetPaths = input
           .split(" ")
@@ -107,12 +107,14 @@ export class ScanCommand extends BaseCommand {
       const dirNameRelativeToRoot = relative(projectRoot, targetDir);
 
       const spinner = this.spinner(
-        `Scanning ${chalk.bold(dirNameRelativeToRoot || ".")}...`,
+        `Scanning ${chalk.bold(dirNameRelativeToRoot || ".")}...`
       );
 
       const stats = await Scanner.run(targetDir, rootConfig);
       spinner.succeed(
-        `Scanned ${dirNameRelativeToRoot || "Root"} (${stats.files.length} files)`,
+        `Scanned ${dirNameRelativeToRoot || "Root"} (${
+          stats.files.length
+        } files)`
       );
 
       // 🛠️ Update RelPath agar sesuai Project Root
@@ -124,7 +126,7 @@ export class ScanCommand extends BaseCommand {
       // 🛠️ Tree Visual Enhancement
       if (dirNameRelativeToRoot && dirNameRelativeToRoot !== "") {
         aggregatedStats.tree.push(
-          chalk.bold.blue(`📂 ${dirNameRelativeToRoot}/`),
+          chalk.bold.blue(`📂 ${dirNameRelativeToRoot}/`)
         );
       }
       aggregatedStats.tree.push(...stats.tree);
@@ -153,7 +155,9 @@ export class ScanCommand extends BaseCommand {
     this.displayReport(aggregatedStats);
 
     const shouldWrite = await this.promptYesNo(
-      `${chalk.bgCyan.black(" ACTION ")} Write Digest File? ${chalk.dim("(Y/n)")} `,
+      `${chalk.bgCyan.black(" ACTION ")} Write Digest File? ${chalk.dim(
+        "(Y/n)"
+      )} `
     );
 
     if (!shouldWrite) {
@@ -183,17 +187,17 @@ export class ScanCommand extends BaseCommand {
       [
         chalk.red("Skipped"),
         `${stats.skippedCount} files (${UtilFunctions.formatSize(
-          stats.skippedSize,
+          stats.skippedSize
         )})`,
       ],
-      [chalk.dim("Duration"), `${stats.duration}ms`],
+      [chalk.dim("Duration"), `${stats.duration}ms`]
     );
     generateLog({ type: "info", raw: true }, table.toString());
 
     if (Object.keys(stats.extStats).length > 0) {
       generateLog(
         { type: "info", raw: true },
-        `\n${chalk.dim("Distribution:")}`,
+        `\n${chalk.dim("Distribution:")}`
       );
       Object.entries(stats.extStats)
         .sort((a, b) => b[1].size - a[1].size)
@@ -205,8 +209,8 @@ export class ScanCommand extends BaseCommand {
             `  ${chalk.cyan(ext.padEnd(8))} : ${d.count
               .toString()
               .padEnd(5)} files | ${chalk.yellow(
-              UtilFunctions.formatSize(d.size),
-            )} (${pct}%)`,
+              UtilFunctions.formatSize(d.size)
+            )} (${pct}%)`
           );
         });
     }
@@ -217,7 +221,7 @@ export class ScanCommand extends BaseCommand {
     // 🔥 Nama file output sekarang konsisten: DIGEST_NamaRepo_Timestamp
     const outPath = join(
       SYSTEM.OUT_DIR,
-      `DIGEST_${projectName}_${Date.now()}.md`,
+      `DIGEST_${projectName}_${Date.now()}.md`
     );
 
     if (!(await Bun.file(SYSTEM.OUT_DIR).exists())) {
@@ -233,8 +237,8 @@ export class ScanCommand extends BaseCommand {
     // 🔥 Judul Markdown juga ngikutin nama repo
     writer.write(
       `# Project Digest: ${projectName}\n\n## Structure\n\`\`\`\n${stats.tree.join(
-        "\n",
-      )}\n\`\`\`\n\n## Code Content\n`,
+        "\n"
+      )}\n\`\`\`\n\n## Code Content\n`
     );
 
     const writeSpin = this.spinner("Writing to disk...");
@@ -251,14 +255,14 @@ export class ScanCommand extends BaseCommand {
           } catch {
             return `\n// --- ${f.relPath} (Error Reading File) ---\n`;
           }
-        }),
+        })
       );
 
       for (const c of contents) writer.write(c);
 
       done += chunk.length;
       writeSpin.text = `Writing ${Math.round(
-        (done / stats.files.length) * 100,
+        (done / stats.files.length) * 100
       )}%`;
     }
 

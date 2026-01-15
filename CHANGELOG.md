@@ -1,5 +1,14 @@
 # Changelog
 
+## [16.2.0-ai] - 2026-01-15
+- ✨ Add `hard-restart` command to force a complete rebuild and restart of the CLI.
+- 🛠️ Improve the `open` command to support opening in VS Code, Explorer, or the system default editor.
+- 📝 Enhance the `scan` command with improved prompts and output formatting.
+- 🔑 Add interactive prompt for Google Gemini API key in `set-key` command.
+- ⚙️ Implement a `set` command to manage global settings like AI models and API keys, providing a centralized configuration menu.
+- 🎨 Refactor command prompts to use `promptSelectV2` for consistent styling and behavior.
+
+
 ## [16.1.0-ai] - 2026-01-14
 - ✨ Added a `gen` command to scaffold new commands and managers quickly.
 - 📝 Implemented a `update` command for self-updating Digester to the latest version via Git.
