@@ -47,7 +47,7 @@ export abstract class BaseCommand {
    */
   public abstract execute(
     args: string[],
-    context?: { loader: CommandLoader },
+    context?: { loader: CommandLoader }
   ): Promise<void>;
 
   /**
@@ -139,7 +139,7 @@ export abstract class BaseCommand {
         borderStyle: "round",
         title: title ? chalk.cyan(title) : undefined,
         borderColor: "cyan",
-      }),
+      })
     );
   }
 
@@ -169,21 +169,6 @@ export abstract class BaseCommand {
   }
 
   /**
-   * Prompts the user to select one option from a list (Simple List).
-   *
-   * @param {string} question - The question to ask.
-   * @param {string[]} options - List of choices.
-   * @returns {Promise<string>} The selected option.
-   * @protected
-   */
-  protected async promptSelect(
-    question: string,
-    options: string[],
-  ): Promise<string> {
-    return Utils.promptSelect(question, options);
-  }
-
-  /**
    * Prompts the user to select multiple options via comma-separated indices.
    *
    * @param {string} question - The question to ask.
@@ -193,7 +178,7 @@ export abstract class BaseCommand {
    */
   protected async promptMultiSelect(
     question: string,
-    options: string[],
+    options: string[]
   ): Promise<string[]> {
     return Utils.promptMultiSelect(question, options);
   }
@@ -210,7 +195,7 @@ export abstract class BaseCommand {
   protected async promptSelectV2(
     question: string,
     options: string[],
-    config?: { allowCustom?: boolean; columns?: number },
+    config?: { allowCustom?: boolean; columns?: number }
   ): Promise<string> {
     return Utils.promptSelectV2(question, options, config);
   }

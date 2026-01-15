@@ -31,49 +31,6 @@ export async function promptYesNo(question: string): Promise<boolean> {
 }
 
 /**
- * Prompts the user to select *one* option from a list.
- *
- * @param {string} question - The prompt text.
- * @param {string[]} options - Array of available options.
- * @returns {Promise<string>} The selected option string.
- */
-export async function promptSelect(
-  question: string,
-  options: string[],
-): Promise<string> {
-  generateLog({ type: "info", raw: true }, question);
-  options.forEach((opt, idx) => {
-    generateLog(
-      { type: "info", raw: true },
-      `  ${chalk.cyan(idx + 1)}. ${opt}`,
-    );
-  });
-  process.stdout.write(chalk.yellow("  > Select number: "));
-
-  if (process.stdin.setRawMode) {
-    process.stdin.setRawMode(false);
-  }
-  process.stdin.resume();
-
-  return new Promise((resolve) => {
-    process.stdin.once("data", (data) => {
-      const idx = parseInt(data.toString().trim(), 10) - 1;
-      process.stdin.pause();
-
-      if (Number.isNaN(idx) || idx < 0 || idx >= options.length) {
-        generateLog(
-          { type: "error" },
-          chalk.red("Invalid selection. Defaulting to first option."),
-        );
-        resolve(options[0]);
-      } else {
-        resolve(options[idx]);
-      }
-    });
-  });
-}
-
-/**
  * Prompts the user to select *multiple* options using comma-separated indices.
  *
  * @param {string} question - The prompt text.
@@ -82,19 +39,19 @@ export async function promptSelect(
  */
 export async function promptMultiSelect(
   question: string,
-  options: string[],
+  options: string[]
 ): Promise<string[]> {
   generateLog({ type: "info", raw: true }, question);
   options.forEach((opt, idx) => {
     generateLog(
       { type: "info", raw: true },
-      `  ${chalk.cyan(idx + 1)}. ${opt}`,
+      `  ${chalk.cyan(idx + 1)}. ${opt}`
     );
   });
   process.stdout.write(
     chalk.yellow(
-      "  > Select numbers (comma separated, e.g. 1,2,5) or leave empty: ",
-    ),
+      "  > Select numbers (comma separated, e.g. 1,2,5) or leave empty: "
+    )
   );
 
   if (process.stdin.setRawMode) {
@@ -116,7 +73,7 @@ export async function promptMultiSelect(
         .split(",")
         .map((x) => parseInt(x.trim(), 10) - 1)
         .filter(
-          (idx) => !Number.isNaN(idx) && idx >= 0 && idx < options.length,
+          (idx) => !Number.isNaN(idx) && idx >= 0 && idx < options.length
         );
 
       resolve(indices.map((idx) => options[idx]));
@@ -140,7 +97,7 @@ export async function promptSelectV2(
   config: {
     allowCustom?: boolean;
     columns?: number;
-  } = {},
+  } = {}
 ): Promise<string> {
   const { allowCustom = false, columns = 1 } = config;
   const choices = allowCustom ? [...options, "Other..."] : options;
@@ -185,7 +142,7 @@ export async function promptSelectV2(
   return new Promise((resolve) => {
     const handleKey = async (
       _ch: string,
-      key: { name: string; ctrl: boolean },
+      key: { name: string; ctrl: boolean }
     ) => {
       if (key.ctrl && key.name === "c") {
         process.stdout.write("\x1B[?25h");
@@ -232,12 +189,12 @@ export async function promptSelectV2(
           const selection = choices[index];
           generateLog(
             { type: "success", raw: true },
-            `${chalk.cyan(`? ${question}`)} ${chalk.green(selection)}`,
+            `${chalk.cyan(`? ${question}`)} ${chalk.green(selection)}`
           );
 
           if (allowCustom && selection === "Other...") {
             const custom = await promptText(
-              chalk.yellow("   👉 Enter value: "),
+              chalk.yellow("   👉 Enter value: ")
             );
             resolve(custom || "Other");
           } else {

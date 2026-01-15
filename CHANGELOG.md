@@ -1,5 +1,12 @@
 # Changelog
 
+## [16.2.1-ai] - 2026-01-15
+- ✨ Refactor: Updated prompts to use `promptSelectV2` for consistent column handling.
+- 📝 Refactor: Enhanced error messages during release workflow creation for better clarity.
+- 🧹 Refactor: Removed deprecated `promptSelect` function and associated code.
+- ⚙️ Refactor: Updated date in the generated file header.
+- ⚡️ Refactor: Minor code cleanup and consistency improvements across files.
+
 ## [16.2.0-ai] - 2026-01-15
 - ✨ Add `hard-restart` command to force a complete rebuild and restart of the CLI.
 - 🛠️ Improve the `open` command to support opening in VS Code, Explorer, or the system default editor.
