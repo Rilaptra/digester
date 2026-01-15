@@ -1,5 +1,15 @@
 # Changelog
 
+## [16.5.0-ai] - 2026-01-15
+- ✨ Implemented a stress test for TUI Pagination & Grid system to evaluate performance with large datasets.
+- 📝 Updated the `test.ts` command to include tests for vertical pagination (100 items, 7 visible), grid pagination (60 items, 4 columns, 5 rows), and a new multi-select grid feature.
+- 📦 Added a new `MultiSelect` component for selecting multiple options in a grid layout with pagination.
+- ⚙️ Introduced dynamic column width calculation for better grid alignment.
+- 🎨 Improved visual presentation with icons, colors, and clear indicators.
+- ⚡️ Added scrollbar indicators for pagination.
+- 🧹 Refactored code for better readability and maintainability.
+- 🐛 Fixed potential issues with empty slots in grid rendering.
+
 ## [16.4.0-ai] - 2026-01-15
 - ✨ Introduced a new `Select` component for interactive menu creation.
 - 📝 Added builder methods (`title`, `columns`, `add`, `separator`) for configuring the `Select` component.

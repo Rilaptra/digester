@@ -20,5 +20,5 @@
     "start": "bun dist/index.js",
     "setup": "bun run build && bun src/index.ts setup"
   },
-  "version": "16.4.0-ai"
+  "version": "16.5.0-ai"
 }
