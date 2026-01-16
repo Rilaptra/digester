@@ -1,19 +1,20 @@
 # ⚡ DIGESTER
+
 <div align="center">
 
 ```text
-░███████   ░██                                    ░██                       
-░██   ░██                                         ░██                       
+░███████   ░██                                    ░██
+░██   ░██                                         ░██
 ░██    ░██ ░██ ░████████  ░███████   ░███████  ░████████  ░███████  ░██░████
-░██    ░██ ░██░██    ░██ ░██    ░██ ░██           ░██    ░██    ░██ ░███    
-░██    ░██ ░██░██    ░██ ░█████████  ░███████     ░██    ░█████████ ░██     
-░██   ░██  ░██░██   ░███ ░██               ░██    ░██    ░██        ░██     
-░███████   ░██ ░█████░██  ░███████   ░███████      ░████  ░███████  ░██     
-                     ░██                                                    
-               ░███████                                                     
+░██    ░██ ░██░██    ░██ ░██    ░██ ░██           ░██    ░██    ░██ ░███
+░██    ░██ ░██░██    ░██ ░█████████  ░███████     ░██    ░█████████ ░██
+░██   ░██  ░██░██   ░███ ░██               ░██    ░██    ░██        ░██
+░███████   ░██ ░█████░██  ░███████   ░███████      ░████  ░███████  ░██
+                     ░██
+               ░███████
 ```
 
-![Version](https://img.shields.io/badge/Version-17.2.0--ai-blue?style=for-the-badge&logo=git)
+![Version](https://img.shields.io/badge/Version-17.2.1--ai-blue?style=for-the-badge&logo=git)
 ![Runtime](https://img.shields.io/badge/Runtime-Bun_v1.2+-black?logo=bun&style=for-the-badge)
 ![Security](https://img.shields.io/badge/Security-Secret_Scan-red?style=for-the-badge&logo=shield)
 ![Build](https://img.shields.io/badge/Build-Native_Binary-green?style=for-the-badge)
@@ -141,8 +142,7 @@ Designed for **Resilience** and **Performance**.
 
 ## 👤 Author
 
-**Rizqi Lasheva (Rilaptra)**
-_Civil Engineering Student x Code Wizard._
+**(Rilaptra)**
 
 - 🌐 [Eryzsh Dashboard](https://erzysh.vercel.app)
 - 🐙 [GitHub](https://github.com/Rilaptra)

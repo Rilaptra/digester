@@ -1,5 +1,10 @@
 # Changelog
 
+## [17.2.1-ai] - 2026-01-16
+- ✨ Updated the author name in README.md from 'Rizqi Lasheva (Rilaptra)' to '(Rilaptra)'.
+- 📦 Renamed the npm package from `@erzy/digester` to `@rilaptra/digester` in `package.json` to reflect the author's preferred handle.
+- ⚙️ Updated the generated timestamp in `src/commands/index.ts` to reflect the latest code generation time.
+
 ## [17.2.0-ai] - 2026-01-16
 - ✨ Updated package name to `@rilaptra/digester` for proper scoping.
 - 📦 Added `files` array to `package.json` to specify which files to include in the published package (only `dist`).

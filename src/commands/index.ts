@@ -1,5 +1,5 @@
 // 🤖 AUTO-GENERATED REGISTRY
-// 📅 Generated at: 2026-01-16T07:47:34.163Z
+// 📅 Generated at: 2026-01-16T08:29:25.843Z
 // ⚠️ DO NOT EDIT MANUALLY - Run 'bun run codegen' instead
 
 export * from "./ansi.js";
