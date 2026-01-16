@@ -1,12 +1,20 @@
 {
-  "name": "digester",
-  "version": "17.1.0-ai",
+  "name": "@rilaptra/digester",
+  "version": "17.2.0-ai",
   "description": "High-performance codebase context generator and AI operations toolkit optimized for Bun.",
-  "module": "src/index.ts",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "bin": {
-    "digest": "src/index.ts",
-    "prompter": "src/index.ts"
+    "digest": "dist/index.js",
+    "prompter": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "repository": {
     "type": "git",

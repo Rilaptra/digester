@@ -1,5 +1,14 @@
 # Changelog
 
+## [17.2.0-ai] - 2026-01-16
+- ✨ Updated package name to `@rilaptra/digester` for proper scoping.
+- 📦 Added `files` array to `package.json` to specify which files to include in the published package (only `dist`).
+- ⚙️ Modified `module`, `main`, and `types` entries in `package.json` to point to the `dist` directory after build.
+- 📝 Updated build scripts to output to `dist` directory.
+- 🏷️ Added `publishConfig` to `package.json` to set access to `public`.
+- 🧹 Added necessary files and directories to `.npmignore` to prevent unwanted files from being published.
+- 📜 Updated timestamp in `src/commands/index.ts` to reflect the latest changes.
+
 ## [17.1.0-ai] - 2026-01-16
 - ✨ Introduce the `ansi` command for generating ANSI gradient art.
 - Supports text input or reading from a file.
