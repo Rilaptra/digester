@@ -2,7 +2,12 @@
 import chalk from "chalk";
 import { BaseCommand } from "../core/BaseCommand.js";
 import { Select } from "../utils/tui/Select.js";
-import { MultiSelect } from "../utils/index.js";
+import {
+  AutoComplete,
+  Confirm,
+  MultiSelect,
+  TextPrompt,
+} from "../utils/index.js";
 
 export class TestCommand extends BaseCommand {
   public name = "test";
@@ -10,7 +15,7 @@ export class TestCommand extends BaseCommand {
   public aliases = ["demo", "tui"];
 
   public async execute(_args: string[]): Promise<void> {
-    this.createBox("🧪 TUI STRESS TEST");
+    this.createBox("🧪 TUI ULTIMATE STRESS TEST");
 
     // --- TEST 1: VERTICAL PAGINATION (Heavy List) ---
     this.log(
@@ -112,6 +117,92 @@ export class TestCommand extends BaseCommand {
     const selectedToppings = await pizzaToppings.run();
     this.success(`Making pizza with: ${selectedToppings.join(", ")}`);
 
-    this.createBox("✅ ALL TESTS COMPLETED");
+    // --- TEST 4: CONFIRM CLASS ---
+    this.log(chalk.yellow("\n🌗 TEST 4: Confirm Class (Boolean)"));
+
+    const isReady = await new Confirm({
+      title: "Are you ready to rock?",
+      initialValue: true,
+    }).run();
+
+    if (!isReady) {
+      this.error("Sad noise... exiting demo.");
+      return;
+    }
+
+    // --- TEST 5: TEXT PROMPT CLASS ---
+    this.log(chalk.yellow("\n✎ TEST 5: Text Prompt (Validation & Password)"));
+
+    const username = await new TextPrompt({
+      title: "Enter Username",
+      placeholder: "e.g. Rilaptra",
+      validate: (val) => (val.length < 3 ? "Username must be > 3 chars" : true),
+    }).run();
+
+    const password = await new TextPrompt({
+      title: "Enter Secret Password",
+      password: true,
+      validate: (val) => (val === "123456" ? "Too weak!" : true),
+    }).run();
+
+    this.success(`User created: ${username} (Pass length: ${password.length})`);
+
+    // --- TEST 6: AUTO COMPLETE ---
+    this.log(chalk.yellow("\n🔍 TEST 6: Auto Complete (Git Commands)"));
+    this.dim(
+      "   Type 'c' to see suggestions. Use Arrows to select. TAB to autofill."
+    );
+
+    const gitCmds = [
+      "checkout",
+      "commit",
+      "clone",
+      "cherry-pick",
+      "config",
+      "branch",
+      "blame",
+      "bisect",
+      "status",
+      "stash",
+      "switch",
+      "pull",
+      "push",
+      "fetch",
+      "merge",
+      "rebase",
+      "reset",
+      "restore",
+      "revert",
+      "add",
+      "archive",
+      "apply",
+    ];
+
+    const cmd = await new AutoComplete({
+      title: "Run Git Command",
+      options: gitCmds,
+      limit: 5, // Maksimal 5 saran tampil
+    }).run();
+
+    this.success(`Executing: git ${cmd}`);
+
+    // --- TEST 7: AUTO COMPLETE (Countries) ---
+    // Contoh list panjang
+    const countries = [
+      "Indonesia",
+      "India",
+      "Iran",
+      "Iraq",
+      "Ireland",
+      "Italy",
+      "Iceland",
+      "Israel",
+    ];
+    const country = await new AutoComplete({
+      title: "Select Country",
+      options: countries,
+    }).run();
+
+    this.success(`You are going to: ${country}`);
   }
 }

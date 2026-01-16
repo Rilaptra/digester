@@ -1,5 +1,13 @@
 # Changelog
 
+## [16.6.0-ai] - 2026-01-16
+- ✨ Added interactive TUI elements for enhanced user experience.
+- 📝 Implemented a `Confirm` class for boolean prompts, allowing users to confirm actions.
+- ⌨️ Introduced a `TextPrompt` class for text input with validation and password support.
+- 🔍 Integrated an `AutoComplete` class for providing suggestions during input, improving usability.
+- ⚙️ Refactored `src/utils/index.ts` to export the new TUI components.
+- 📜 Added example usage of the new components in `src/commands/test.ts` to demonstrate their functionality.
+
 ## [16.5.0-ai] - 2026-01-15
 - ✨ Implemented a stress test for TUI Pagination & Grid system to evaluate performance with large datasets.
 - 📝 Updated the `test.ts` command to include tests for vertical pagination (100 items, 7 visible), grid pagination (60 items, 4 columns, 5 rows), and a new multi-select grid feature.
