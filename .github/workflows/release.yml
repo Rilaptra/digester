@@ -31,10 +31,13 @@ jobs:
       - name: 🔨 Build for NPM
         run: bun run build
 
-      - name: 🚀 Publish to NPM
-        run: bun publish --access public
+      - name: 🔑 Authenticate with NPM
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 🚀 Publish to NPM
+        run: bun publish --access public
 
       # --- 🏗️ COMPILE STEP (Cross-Platform) ---
 

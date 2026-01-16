@@ -1,5 +1,11 @@
 # Changelog
 
+## [17.4.1-ai] - 2026-01-16
+- ✨ Added NPM authentication step to the release workflow.
+- This change introduces an authentication step using the `NPM_TOKEN` secret before publishing to NPM.
+- This ensures secure publishing of packages to the NPM registry.
+- 📝 Updated timestamp in src/commands/index.ts to reflect the latest generation time.
+
 ## [17.4.0-ai] - 2026-01-16
 - ✨ Refactored the npm publishing workflow in `.github/workflows/release.yml`.
 - 🛠️ Consolidated the build and publish steps for npm, improving clarity and reducing redundancy.
