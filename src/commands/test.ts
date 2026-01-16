@@ -1,4 +1,7 @@
 // --- src/commands/test.ts ---
+
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import chalk from "chalk";
 import { BaseCommand } from "../core/BaseCommand.js";
 import {
@@ -149,63 +152,145 @@ export class TestCommand extends BaseCommand {
 
     this.success(`User created: ${username} (Pass length: ${password.length})`);
 
-    // --- TEST 6: AUTO COMPLETE ---
-    this.log(chalk.yellow("\n🔍 TEST 6: Auto Complete (Git Commands)"));
+    // --- TEST 6: RECURSIVE PATH NAVIGATOR (CD COMMAND) ---
+    this.log(chalk.yellow("\n📂 TEST 6: Recursive File System Navigation"));
     this.dim(
-      "   Type 'c' to see suggestions. Use Arrows to select. TAB to autofill.",
+      "   Try typing 'src/' then TAB. Then 'comm' TAB. It reads REAL folders!",
     );
 
-    const gitCmds = [
-      "checkout",
-      "commit",
-      "clone",
-      "cherry-pick",
-      "config",
-      "branch",
-      "blame",
-      "bisect",
-      "status",
-      "stash",
-      "switch",
-      "pull",
-      "push",
-      "fetch",
-      "merge",
-      "rebase",
-      "reset",
-      "restore",
-      "revert",
-      "add",
-      "archive",
-      "apply",
-    ];
+    const cwd = process.cwd();
 
-    const cmd = await new AutoComplete({
-      title: "Run Git Command",
-      options: gitCmds,
-      limit: 5, // Maksimal 5 saran tampil
+    const pathCmd = await new AutoComplete({
+      title: "cd",
+      initialValue: "",
+      separator: " ", // Token dipisah spasi (misal: "cd src/utils")
+      suggest: async (token) => {
+        // Token: bagian text yg sedang diketik (misal: "src/co")
+
+        // 1. Determine Base Directory & Search Term
+        // Kalau token kosong, list isi CWD
+        // Kalau token "src/", list isi CWD/src
+        // Kalau token "src/ut", list isi CWD/src yang depannya "ut"
+
+        let searchDir = cwd;
+        let filePrefix = "";
+
+        // Detect if user typed a path separator
+        const lastSepIndex = token.lastIndexOf("/"); // Gunakan / agar konsisten di UI (atau path.sep)
+
+        if (lastSepIndex !== -1) {
+          // "src/utils/" -> Dir: "src/utils", Prefix: ""
+          // "src/u"      -> Dir: "src", Prefix: "u"
+          const dirPart = token.slice(0, lastSepIndex);
+          searchDir = join(cwd, dirPart);
+          filePrefix = token.slice(lastSepIndex + 1);
+        } else {
+          filePrefix = token;
+        }
+
+        try {
+          const entries = await readdir(searchDir, { withFileTypes: true });
+
+          // Filter: Hanya Folder (karena ini command 'cd')
+          // Dan match dengan prefix yg udah diketik
+          const matches = entries
+            .filter((e) => e.isDirectory() && e.name.startsWith(filePrefix))
+            .map((e) => {
+              // Reconstruct full relative token
+              // Misal user ketik "sr", match "src", return "src/"
+              // Misal user ketik "src/ut", match "utils", return "src/utils/"
+
+              const relativePart =
+                lastSepIndex !== -1
+                  ? token.slice(0, lastSepIndex + 1) + e.name
+                  : e.name;
+
+              return `${relativePart}/`; // Tambah slash biar user bisa langsung lanjut ngetik dalam folder tsb
+            });
+
+          return matches;
+        } catch {
+          return []; // Invalid path, no suggestion
+        }
+      },
     }).run();
 
-    this.success(`Executing: git ${cmd}`);
+    this.success(`Navigated to: ${pathCmd}`);
 
-    // --- TEST 7: AUTO COMPLETE (Countries) ---
-    // Contoh list panjang
-    const countries = [
-      "Indonesia",
-      "India",
-      "Iran",
-      "Iraq",
-      "Ireland",
-      "Italy",
-      "Iceland",
-      "Israel",
-    ];
-    const country = await new AutoComplete({
-      title: "Select Country",
-      options: countries,
+    // --- DEMO 2: NESTED CONFIG (SET COMMAND) ---
+    this.log(chalk.yellow("\n⚙️  DEMO 2: Context-Aware Config Setter"));
+    this.dim("   Try typing 'set api key' or 'set theme color'.");
+    this.dim("   Suggestions change based on previous words!");
+
+    // Mock Data Config Structure
+    const configSchema: Record<string, Record<string, string>> = {
+      api: {
+        url: "https://api.example.com",
+        key: "secret",
+        port: "8080",
+        timeout: "5000",
+      },
+      theme: {
+        color: "dark",
+        font: "Fira Code",
+        icons: "true",
+      },
+      core: {
+        logging: "verbose",
+        threads: "4",
+      },
+    };
+
+    const configCmd = await new AutoComplete({
+      title: "config",
+      initialValue: "set ",
+      separator: " ",
+      suggest: (token, fullInput) => {
+        // 🔥 FIX: Deteksi Context dengan Benar
+        const trimmedInput = fullInput.trim();
+        const parts = trimmedInput.split(/\s+/);
+        const isTrailingSpace = fullInput.endsWith(" ");
+
+        // Tentukan index argumen mana yang lagi diedit.
+        // "set"      -> parts=["set"], trailing=false, index=0
+        // "set "     -> parts=["set"], trailing=true,  index=1 (Config Category)
+        // "set api"  -> parts=["set", "api"], trailing=false, index=1 (Config Category)
+        // "set api " -> parts=["set", "api"], trailing=true,  index=2 (Config Key)
+
+        const currentIndex = isTrailingSpace ? parts.length : parts.length - 1;
+
+        // Level 1: "set <category>" (Index 1)
+        // Kita suggest category
+        if (currentIndex === 1) {
+          return Object.keys(configSchema).filter((k) => k.startsWith(token));
+        }
+
+        // Level 2: "set category <key>" (Index 2)
+        // Kita butuh category dari parts[1]
+        if (currentIndex === 2) {
+          const category = parts[1]; // "api" atau "theme"
+          if (configSchema[category]) {
+            return Object.keys(configSchema[category]).filter((k) =>
+              k.startsWith(token),
+            );
+          }
+        }
+
+        // Level 3: "set category key <value>" (Index 3)
+        // Kita suggest value saat ini
+        if (currentIndex === 3) {
+          const category = parts[1];
+          const key = parts[2];
+          if (configSchema[category]?.[key]) {
+            return [`"${configSchema[category][key]}"`];
+          }
+        }
+
+        return [];
+      },
     }).run();
 
-    this.success(`You are going to: ${country}`);
+    this.success(`Executed: ${configCmd}`);
 
     // --- TEST 8: SPIN NUMBER ---
     this.log(chalk.yellow("\n🔢 TEST 8: Numeric Input (Arrow Keys)"));

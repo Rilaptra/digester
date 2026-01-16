@@ -1,11 +1,33 @@
+// --- src/utils/tui/AutoComplete.ts ---
+/** biome-ignore-all lint/style/noNonNullAssertion: <explanation: biome-ignore> */
 import { emitKeypressEvents } from "node:readline";
 import chalk from "chalk";
 
+/**
+ * The suggester function provided by the developer.
+ * @param token - The specific word/token currently being edited (e.g., "src/u").
+ * @param fullInput - The entire input string (e.g., "cd src/u").
+ * @returns A list of suggestions to replace the current token (e.g., ["src/utils/", "src/users/"]).
+ */
+export type AutoCompleteSuggester = (
+  token: string,
+  fullInput: string,
+) => Promise<string[]> | string[];
+
 export interface AutoCompleteConfig {
   title: string;
-  options: string[];
+  /**
+   * Function to generate suggestions dynamically.
+   * Replaces static 'options'.
+   */
+  suggest: AutoCompleteSuggester;
+  /**
+   * Character used to split tokens. Default is space (" ").
+   * Can be a string or Regex.
+   */
+  separator?: string | RegExp;
   limit?: number;
-  clearOnSubmit?: boolean;
+  initialValue?: string;
 }
 
 export class AutoComplete {
@@ -13,29 +35,76 @@ export class AutoComplete {
   private input = "";
   private cursorPos = 0;
 
+  // State Management
   private suggestions: string[] = [];
   private selectedIndex = 0;
-  private scrollOffset = 0; // 🔥 State untuk scrolling
+  private scrollOffset = 0;
   private lastRenderHeight = 0;
 
+  // Token Management
+  private activeToken = "";
+  private tokenStart = 0;
+  private tokenEnd = 0;
+
   constructor(config: AutoCompleteConfig) {
-    this.config = { ...config, limit: config.limit || 5 };
+    this.config = {
+      limit: 10,
+      separator: " ",
+      ...config,
+    };
+    this.input = config.initialValue || "";
+    this.cursorPos = this.input.length;
   }
 
-  private filterOptions() {
-    if (!this.input) {
-      this.suggestions = [];
-      this.selectedIndex = 0;
-      this.scrollOffset = 0;
-      return;
+  /**
+   * Core Logic: Parses the input, identifies the active token,
+   * and fetches suggestions from the developer's logic.
+   */
+  private async refreshSuggestions() {
+    // 1. Identify Token Boundaries based on Cursor Position
+    const sep = this.config.separator!;
+    let start = 0;
+    let end = this.input.length;
+
+    // Simple tokenizer logic handling specific cursor position
+    // We scan left and right from cursor until we hit a separator
+    for (let i = this.cursorPos - 1; i >= 0; i--) {
+      if (this.input[i].match(sep)) {
+        start = i + 1;
+        break;
+      }
     }
-    const lower = this.input.toLowerCase();
-    this.suggestions = this.config.options.filter((opt) =>
-      opt.toLowerCase().includes(lower)
-    );
-    // Reset selection & scroll tiap ketik
-    this.selectedIndex = 0;
-    this.scrollOffset = 0;
+    for (let i = this.cursorPos; i < this.input.length; i++) {
+      if (this.input[i].match(sep)) {
+        end = i;
+        break;
+      }
+    }
+
+    this.tokenStart = start;
+    this.tokenEnd = end;
+    this.activeToken = this.input.slice(start, end);
+
+    // 2. Fetch Suggestions from Developer
+    try {
+      const rawSuggestions = await this.config.suggest(
+        this.activeToken,
+        this.input,
+      );
+
+      // 3. Filter visually (Optional, but good UX to verify match)
+      // Usually developer returns relevant stuff, but we can fuzzy highlight
+      // For now, we assume developer returns valid replacements for the token.
+      this.suggestions = rawSuggestions;
+
+      // Reset selection if list changed drastically
+      if (this.selectedIndex >= this.suggestions.length) {
+        this.selectedIndex = 0;
+        this.scrollOffset = 0;
+      }
+    } catch {
+      this.suggestions = [];
+    }
   }
 
   public async run(): Promise<string> {
@@ -45,139 +114,149 @@ export class AutoComplete {
     stdin.resume();
     emitKeypressEvents(stdin);
 
+    // Initial Fetch
+    await this.refreshSuggestions();
+
     stdout.write("\x1B[?25l");
 
     const render = () => {
-      // 1. CLEANUP OLD RENDER
+      // 1. CLEANUP
       if (this.lastRenderHeight > 0) {
-        stdout.write("\x1B[J");
+        stdout.write(`\x1B[${this.lastRenderHeight}B`); // Go down to bottom of rendering
+        stdout.write(`\x1B[${this.lastRenderHeight}A`); // Go back up
+        stdout.write("\x1B[J"); // Clear everything below
       }
 
-      // 2. CLEAR INPUT LINE
-      stdout.write("\x1B[2K\r");
-
-      // 3. RENDER INPUT
+      // 2. RENDER INPUT LINE
+      stdout.write("\x1B[2K\r"); // Clear line
       const qMark = chalk.cyan("? ");
       const title = chalk.bold(this.config.title);
       const pointer = chalk.dim("›");
 
-      stdout.write(`${qMark}${title} ${pointer} ${this.input}`);
+      // Highlight Token being edited
+      const before = this.input.slice(0, this.tokenStart);
+      const token = this.input.slice(this.tokenStart, this.tokenEnd);
+      const after = this.input.slice(this.tokenEnd);
 
-      // 4. RENDER SUGGESTIONS (SCROLLABLE)
+      // Visual feedback: Token yang aktif warnanya beda dikit (misal underline)
+      const coloredInput = `${before}${chalk.underline(token)}${after}`;
+
+      stdout.write(`${qMark}${title} ${pointer} ${coloredInput}`);
+
+      // 3. RENDER SUGGESTIONS
       const limit = this.config.limit || 5;
       const total = this.suggestions.length;
-
-      // Hitung Viewport
-      // Kita ambil slice dari [scrollOffset ... scrollOffset + limit]
-      const visibleSuggestions = this.suggestions.slice(
-        this.scrollOffset,
-        this.scrollOffset + limit
-      );
-
       let linesToPrint: string[] = [];
 
-      if (visibleSuggestions.length > 0) {
-        // Cari max length untuk padding scrollbar
-        const maxLen = Math.max(...this.suggestions.map((s) => s.length));
-        const colWidth = maxLen + 4; // Buffer dikit
+      if (total > 0) {
+        const visible = this.suggestions.slice(
+          this.scrollOffset,
+          this.scrollOffset + limit,
+        );
 
-        linesToPrint = visibleSuggestions.map((sug, idx) => {
-          // Real index di data asli
+        linesToPrint = visible.map((sug, idx) => {
           const realIndex = this.scrollOffset + idx;
           const isSelected = realIndex === this.selectedIndex;
 
-          const prefix = isSelected ? chalk.cyan("❯") : " ";
-          const text = isSelected ? chalk.cyan.bold(sug) : chalk.dim(sug);
+          // Highlight matching part of the token
+          const matchLen = this.activeToken.length;
+          let displaySug = sug;
 
-          // Padding Logic biar Scrollbar Rapi
-          // Panjang visual: prefix(2) + sug.length
-          // Kita butuh padding sisa
-          const paddingNeeded = Math.max(1, colWidth - (2 + sug.length));
-          const padding = " ".repeat(paddingNeeded);
-
-          // Scrollbar Logic
-          let scrollBar = " ";
-          if (total > limit) {
-            if (realIndex === this.scrollOffset && this.scrollOffset > 0)
-              scrollBar = "▲";
-            else if (
-              realIndex === this.scrollOffset + limit - 1 &&
-              this.scrollOffset + limit < total
-            )
-              scrollBar = "▼";
-            else scrollBar = "│";
+          // Simple highlighting: if suggestion starts with token, color it
+          if (
+            sug.toLowerCase().startsWith(this.activeToken.toLowerCase()) &&
+            matchLen > 0
+          ) {
+            displaySug =
+              chalk.cyan(sug.slice(0, matchLen)) +
+              chalk.dim(sug.slice(matchLen));
+          } else {
+            displaySug = chalk.dim(sug);
           }
 
-          // Warna Scrollbar (Dim)
-          return `${prefix} ${text}${padding}${chalk.dim(scrollBar)}`;
+          if (isSelected) {
+            return `${chalk.cyan("❯")} ${chalk.bold.white(sug)}`; // Selected is bright white
+          }
+          return `  ${displaySug}`;
         });
+
+        // Scrollbar hints
+        if (total > limit) {
+          const progress = Math.round(
+            (this.scrollOffset / (total - limit)) * 100,
+          );
+          linesToPrint.push(
+            chalk.dim(
+              `  [${progress}%] (${this.scrollOffset + 1}-${Math.min(this.scrollOffset + limit, total)}/${total})`,
+            ),
+          );
+        }
       }
 
-      // 5. PRINT SUGGESTIONS
+      // 4. PRINT SUGGESTIONS
       if (linesToPrint.length > 0) {
         stdout.write("\n");
         stdout.write(linesToPrint.join("\n"));
-
         this.lastRenderHeight = linesToPrint.length;
-
-        // Balikin cursor ke input line
-        stdout.write(`\x1B[${this.lastRenderHeight}A`);
+        stdout.write(`\x1B[${this.lastRenderHeight}A`); // Move back to input line
       } else {
         this.lastRenderHeight = 0;
       }
 
-      // 6. POSISIKAN CURSOR INPUT
+      // 5. POSITION CURSOR
+      // Prefix length: "? " (2) + Title + " › " (3)
       const prefixLen = 2 + this.config.title.length + 3;
       const visualCursor = prefixLen + this.cursorPos;
-
       stdout.write(`\x1B[${visualCursor + 1}G`);
-      stdout.write("\x1B[?25h");
     };
 
     render();
 
     return new Promise((resolve) => {
-      const handleKey = (
+      const handleKey = async (
         _: unknown,
-        key: { name: string; ctrl: boolean; sequence: string }
+        key: { name: string; ctrl: boolean; sequence: string },
       ) => {
         if (key.ctrl && key.name === "c") {
-          if (this.lastRenderHeight > 0) stdout.write("\x1B[J");
-          stdout.write("\n");
+          stdout.write("\n\x1B[J\x1B[?25h");
           process.exit(0);
         }
 
         switch (key.name) {
           case "return":
           case "enter": {
-            let finalValue = this.input;
-            if (this.suggestions.length > 0) {
-              // Ambil selected index yang bener (dari data asli)
-              finalValue = this.suggestions[this.selectedIndex];
-            }
+            stdout.write("\x1B[J"); // Clear suggestions
+            stdout.write("\x1B[2K\r"); // Clear line
 
-            if (stdin.setRawMode) stdin.setRawMode(false);
-            stdin.pause();
-            stdin.removeListener("keypress", handleKey);
-
-            stdout.write("\x1B[J");
-            stdout.write("\x1B[2K\r");
-
+            // Final Output
             stdout.write(
-              `${chalk.cyan("? ")} ${chalk.bold(
-                this.config.title
-              )} ${chalk.green(finalValue)}\n`
+              `${chalk.cyan("? ")} ${chalk.bold(this.config.title)} ${chalk.green(this.input)}\n`,
             );
 
-            resolve(finalValue);
+            cleanup();
+            resolve(this.input);
             break;
           }
 
           case "tab":
             if (this.suggestions.length > 0) {
-              this.input = this.suggestions[this.selectedIndex];
-              this.cursorPos = this.input.length;
-              this.filterOptions();
+              const selected = this.suggestions[this.selectedIndex];
+
+              const before = this.input.slice(0, this.tokenStart);
+              const after = this.input.slice(this.tokenEnd);
+
+              // 🔥 UX IMPROVEMENT: Auto-Add Space
+              // Kalau suggestion yang dipilih bukan folder (nggak ada slash di akhir),
+              // tambahkan spasi otomatis biar user langsung gas ngetik kata selanjutnya.
+              let insertion = selected;
+              if (!insertion.endsWith("/") && !insertion.endsWith(" ")) {
+                insertion += " ";
+              }
+
+              this.input = before + insertion + after;
+              this.cursorPos = (before + insertion).length;
+
+              await this.refreshSuggestions();
               render();
             }
             break;
@@ -185,23 +264,15 @@ export class AutoComplete {
           case "up":
             if (this.suggestions.length > 0) {
               this.selectedIndex--;
-
-              // Logic Wrap Around
               if (this.selectedIndex < 0) {
                 this.selectedIndex = this.suggestions.length - 1;
-                // Adjust Scroll ke paling bawah
-                const limit = this.config.limit || 5;
                 this.scrollOffset = Math.max(
                   0,
-                  this.suggestions.length - limit
+                  this.suggestions.length - (this.config.limit || 5),
                 );
-              }
-
-              // Logic Scroll Up
-              else if (this.selectedIndex < this.scrollOffset) {
+              } else if (this.selectedIndex < this.scrollOffset) {
                 this.scrollOffset = this.selectedIndex;
               }
-
               render();
             }
             break;
@@ -209,32 +280,13 @@ export class AutoComplete {
           case "down":
             if (this.suggestions.length > 0) {
               this.selectedIndex++;
-
-              // Logic Wrap Around
+              const limit = this.config.limit || 5;
               if (this.selectedIndex >= this.suggestions.length) {
                 this.selectedIndex = 0;
                 this.scrollOffset = 0;
+              } else if (this.selectedIndex >= this.scrollOffset + limit) {
+                this.scrollOffset = this.selectedIndex - limit + 1;
               }
-
-              // Logic Scroll Down
-              else {
-                const limit = this.config.limit || 5;
-                if (this.selectedIndex >= this.scrollOffset + limit) {
-                  this.scrollOffset = this.selectedIndex - limit + 1;
-                }
-              }
-
-              render();
-            }
-            break;
-
-          case "backspace":
-            if (this.cursorPos > 0) {
-              this.input =
-                this.input.slice(0, this.cursorPos - 1) +
-                this.input.slice(this.cursorPos);
-              this.cursorPos--;
-              this.filterOptions();
               render();
             }
             break;
@@ -242,12 +294,24 @@ export class AutoComplete {
           case "left":
             if (this.cursorPos > 0) {
               this.cursorPos--;
+              await this.refreshSuggestions();
               render();
             }
             break;
           case "right":
             if (this.cursorPos < this.input.length) {
               this.cursorPos++;
+              await this.refreshSuggestions();
+              render();
+            }
+            break;
+          case "backspace":
+            if (this.cursorPos > 0) {
+              this.input =
+                this.input.slice(0, this.cursorPos - 1) +
+                this.input.slice(this.cursorPos);
+              this.cursorPos--;
+              await this.refreshSuggestions();
               render();
             }
             break;
@@ -259,11 +323,18 @@ export class AutoComplete {
                 key.sequence +
                 this.input.slice(this.cursorPos);
               this.cursorPos++;
-              this.filterOptions();
+              await this.refreshSuggestions();
               render();
             }
             break;
         }
+      };
+
+      const cleanup = () => {
+        if (stdin.setRawMode) stdin.setRawMode(false);
+        stdin.pause();
+        stdin.removeListener("keypress", handleKey);
+        stdout.write("\x1B[?25h");
       };
 
       stdin.on("keypress", handleKey);

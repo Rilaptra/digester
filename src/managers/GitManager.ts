@@ -224,7 +224,7 @@ export class GitManager {
 
   /**
    * Update README.md version badge.
-   * Finds format: ![Version](https://img.shields.io/badge/Version-X.Y.Z-blue...)
+   * Finds format: ![Version](https://img.shields.io/badge/Version-X.Y.Z--ai-blue?style=for-the-badge)
    * and replaces X.Y.Z with newVer.
    */
   static async updateReadmeVersion(

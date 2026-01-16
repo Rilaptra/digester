@@ -1,5 +1,18 @@
 # Changelog
 
+## [16.9.0-ai] - 2026-01-16
+- ✨ Implemented recursive file system navigation for the 'cd' command.
+- Users can now tab-complete directory paths, providing a more intuitive experience.
+- The autocomplete functionality now dynamically suggests files and folders based on the current path.
+- ⚙️ Added a context-aware config setter demo.
+- The 'set' command now provides suggestions based on the previous words entered.
+- A mock config schema is used to demonstrate the dynamic suggestion functionality.
+- 🛠️ Refactored autocomplete component for better flexibility and maintainability.
+- Introduced `AutoCompleteSuggester` type for dynamic suggestion functions.
+- Added `separator` and `initialValue` options to the `AutoComplete` component.
+- 🧹 Improved code clarity and removed unnecessary comments.
+- 🐛 Fixed a bug where the autocomplete suggestions were not being filtered correctly.
+
 ## [16.8.1-ai] - 2026-01-16
 - ✨ Improved the commit workflow by adding commas to prompts for better readability.
 - 🚀 Added functionality to update the README file with the new version number and command list after a release.
