@@ -1,5 +1,9 @@
 # Changelog
 
+## [17.4.2-ai] - 2026-01-16
+- ✨ Corrected the location where the npm token is saved in the release workflow. The token is now saved to `.npmrc` in the root of the project instead of the user's home directory, ensuring it's included in the release artifacts.
+- 📝 Updated the timestamp in `src/commands/index.ts` to reflect the latest code generation time. This is a minor update to keep the generated file metadata current.
+
 ## [17.4.1-ai] - 2026-01-16
 - ✨ Added NPM authentication step to the release workflow.
 - This change introduces an authentication step using the `NPM_TOKEN` secret before publishing to NPM.
