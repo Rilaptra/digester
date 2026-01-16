@@ -1,5 +1,12 @@
 # Changelog
 
+## [17.3.0-ai] - 2026-01-16
+- ✨ Introduce automated npm release workflow.
+- 🚀 Added a new workflow step to automatically publish the package to npm upon tag creation.
+- 🔐 Implemented npm login using `actions/setup-node` and `NODE_AUTH_TOKEN`.
+- 🔑 The `npm publish` command is now executed with the npm token stored as a secret.
+- 📝 Updated the timestamp in `src/commands/index.ts` to reflect the latest code generation time.
+
 ## [17.2.1-ai] - 2026-01-16
 - ✨ Updated the author name in README.md from 'Rizqi Lasheva (Rilaptra)' to '(Rilaptra)'.
 - 📦 Renamed the npm package from `@erzy/digester` to `@rilaptra/digester` in `package.json` to reflect the author's preferred handle.
