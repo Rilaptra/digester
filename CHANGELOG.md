@@ -1,5 +1,9 @@
 # Changelog
 
+## [17.3.1-ai] - 2026-01-16
+- ✨ Updated build process to utilize `bun run build` for faster and more efficient builds.
+- 📝 Updated timestamp in `src/commands/index.ts` to reflect the latest build generation time.
+
 ## [17.3.0-ai] - 2026-01-16
 - ✨ Introduce automated npm release workflow.
 - 🚀 Added a new workflow step to automatically publish the package to npm upon tag creation.

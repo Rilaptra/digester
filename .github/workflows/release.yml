@@ -25,6 +25,9 @@ jobs:
       - name: 📦 Install Dependencies
         run: bun install
 
+      - name: 🏗️ Build
+        run: bun run build
+
       # --- 🏗️ COMPILE STEP (Cross-Platform) ---
 
       - name: 🪟 Build for Windows (x64)
