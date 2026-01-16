@@ -1,13 +1,14 @@
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: GitManager is a static class> */
 
 import { existsSync } from "node:fs"; // Keep sync check for init/existence logic or switch to async
+import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import chalk from "chalk";
 import { SYSTEM } from "../constants/defaults.js";
 import { generateLog } from "../utils/logger.js";
 
 export class GitManager {
-   static async prepareAndGetDiff(
+  static async prepareAndGetDiff(
     targetDir: string = SYSTEM.ROOT_DIR,
   ): Promise<string> {
     try {
@@ -28,10 +29,10 @@ export class GitManager {
 
       // 🔥 OPTIMIZATION START HERE
       // Pake -U0 biar context lines-nya 0 (hemat token parah)
-      const proc = Bun.spawn(["git", "diff", "--cached", "-U0"], { 
-        cwd: targetDir 
+      const proc = Bun.spawn(["git", "diff", "--cached", "-U0"], {
+        cwd: targetDir,
       });
-      
+
       const rawDiff = await new Response(proc.stdout).text();
 
       // Filter: Cuma ambil Header File, Tambahan (+), dan Hapus (-)
@@ -50,12 +51,10 @@ export class GitManager {
 
       return cleanDiff;
       // 🔥 OPTIMIZATION END
-      
     } catch {
       return "";
     }
   }
-
 
   static async updateVersion(
     bumpType: string,
@@ -219,6 +218,168 @@ export class GitManager {
         chalk.dim(
           "   Check your internet, remote permission, or 'git remote -v'.",
         ),
+      );
+    }
+  }
+
+  /**
+   * Update README.md version badge.
+   * Finds format: ![Version](https://img.shields.io/badge/Version-X.Y.Z-blue...)
+   * and replaces X.Y.Z with newVer.
+   */
+  static async updateReadmeVersion(
+    newVer: string,
+    targetDir: string = SYSTEM.ROOT_DIR,
+  ) {
+    const readmePath = join(targetDir, "README.md");
+    const readmeFile = Bun.file(readmePath);
+
+    if (!(await readmeFile.exists())) return;
+
+    try {
+      let content = await readmeFile.text();
+
+      // Regex untuk nyari badge version.
+      // Kita cari pattern shields.io standard.
+      // E.g., ![Version](https://img.shields.io/badge/Version-16.7.0--ai-blue?style=for-the-badge)
+      // Note: Shields.io pake double dash (--) buat escape dash (-).
+
+      const safeVer = newVer.replace(/-/g, "--"); // Escape dash for URL
+      const regex =
+        /(!\[.*Version.*\]\(https:\/\/img\.shields\.io\/badge\/Version-)(.+?)(-blue)/;
+
+      if (regex.test(content)) {
+        // Replace existing badge
+        content = content.replace(regex, `$1${safeVer}$3`);
+      } else {
+        // Kalau badge belum ada, kita inject di bawah Title H1
+        const badge = `![Version](https://img.shields.io/badge/Version-${safeVer}-blue?style=for-the-badge)`;
+
+        // Cari posisi setelah header # Digester CLI
+        // Kita inject di baris baru setelah header line
+        const headerRegex = /^(# .+$)/m;
+        if (headerRegex.test(content)) {
+          content = content.replace(headerRegex, `$1\n\n${badge}`);
+        } else {
+          // Fallback prepend
+          content = `${badge}\n\n${content}`;
+        }
+      }
+
+      await Bun.write(readmePath, content);
+
+      // Auto add to git staging
+      Bun.spawnSync(["git", "add", "README.md"], { cwd: targetDir });
+      generateLog(
+        { type: "success" },
+        `   📄 Updated README badge to v${newVer}`,
+      );
+    } catch (e) {
+      generateLog(
+        { type: "warn" },
+        `Failed to update README: ${(e as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * 🔥 AUTOMATIC README COMMANDS TABLE GENERATOR 🔥
+   * Scans src/commands/*.ts, extracts metadata via Regex, and updates README.md table.
+   */
+  static async updateReadmeCommands(targetDir: string = SYSTEM.ROOT_DIR) {
+    const commandsDir = join(targetDir, "src", "commands");
+    const readmePath = join(targetDir, "README.md");
+    const readmeFile = Bun.file(readmePath);
+
+    if (!(await readmeFile.exists()) || !(await Bun.file(commandsDir).exists()))
+      return;
+
+    try {
+      // 1. Scan & Parse Command Files
+      const files = await readdir(commandsDir);
+      const rows: string[] = [];
+
+      for (const file of files) {
+        if (
+          !file.endsWith(".ts") ||
+          file.endsWith(".test.ts") ||
+          file === "index.ts"
+        )
+          continue;
+
+        const content = await Bun.file(join(commandsDir, file)).text();
+
+        // 🧠 Lightweight Regex Parsing (No need for heavy AST)
+        // Extract: public name = "..."
+        const nameMatch = content.match(/public\s+name\s*=\s*["'](.+?)["']/);
+        // Extract: public description = "..."
+        const descMatch = content.match(
+          /public\s+description\s*=\s*["'](.+?)["']/,
+        );
+        // Extract: public aliases = ["...", "..."]
+        const aliasMatch = content.match(
+          /public\s+aliases\s*(?::\s*string\[\])?\s*=\s*\[(.*?)\]/,
+        );
+
+        if (nameMatch) {
+          const name = nameMatch[1];
+          const desc = descMatch ? descMatch[1] : "No description";
+
+          let aliases = "-";
+          if (aliasMatch && aliasMatch[1].trim() !== "") {
+            // Clean up: "a", "b" -> a, b
+            aliases = aliasMatch[1]
+              .split(",")
+              .map((a) => a.trim().replace(/["']/g, ""))
+              .filter((a) => a.length > 0)
+              .map((a) => `\`${a}\``) // Kasih backtick biar gaya
+              .join(", ");
+          }
+
+          // Format Row: | `name` | `alias`, `alias` | Description |
+          rows.push(`| \`${name}\` | ${aliases} | ${desc} |`);
+        }
+      }
+
+      // Sort alphabetic
+      rows.sort();
+
+      // 2. Build New Table
+      const header = "| Command | Alias | Description |";
+      const separator = "| :--- | :--- | :--- |";
+      const newTable = `${header}\n${separator}\n${rows.join("\n")}`;
+
+      // 3. Inject to README
+      let readmeContent = await readmeFile.text();
+
+      // Regex buat nyari section Commands Reference
+      // Kita cari header "## 🎮 Commands Reference" sampai ketemu header berikutnya atau separator
+      // Pake [\s\S]*? buat match multiline non-greedy
+      const sectionRegex =
+        /(## 🎮 Commands Reference\n\n)([\s\S]*?)(\n\n##|\n\n---|$)/;
+
+      if (sectionRegex.test(readmeContent)) {
+        // Replace konten tabel yang lama dengan yang baru
+        readmeContent = readmeContent.replace(sectionRegex, `$1${newTable}$3`);
+
+        await Bun.write(readmePath, readmeContent);
+
+        // Add to Git Staging
+        Bun.spawnSync(["git", "add", "README.md"], { cwd: targetDir });
+        generateLog(
+          { type: "success" },
+          `   📚 Updated README commands table (${rows.length} cmds)`,
+        );
+      } else {
+        generateLog(
+          { type: "warn" },
+          `   ⚠️  Header '## 🎮 Commands Reference' not found in README. Table update skipped.`,
+        );
+      }
+    } catch (e) {
+      generateLog(
+        { type: "error" },
+        `Failed to update README commands: ${(e as Error).message}`,
       );
     }
   }

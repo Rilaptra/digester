@@ -1,5 +1,13 @@
 # Changelog
 
+## [16.8.0-ai] - 2026-01-16
+- ✨ Added audio and visual feedback to the autobuild command for a better developer experience.
+- 📝 Updated the README.md file to include a version badge and automatically generated commands table.
+- 🛠️ Implemented a mechanism to update the version badge in the README.md file.
+- ⚡️ Automated the generation of the commands table in the README.md file by scanning the `src/commands` directory.
+- ⚙️ Added utility functions for setting the terminal title and playing system sounds.
+- 🧹 Refactored code for better readability and maintainability.
+
 ## [16.7.0-ai] - 2026-01-16
 - ✨ Implement auto-build command for automatic recompilation on file changes.
 - 🛠️ Refactor commands to use a consistent prompt interface with TUI components.

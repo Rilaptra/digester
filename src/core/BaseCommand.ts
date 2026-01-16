@@ -168,13 +168,13 @@ export abstract class BaseCommand {
    * Prompts the user with a Yes/No question.
    *
    * @param {string} question - The question to ask.
-   * @param {boolean} [initialValue=false] - Initial selection (default: false/No).
+   * @param {boolean} [initialValue=true] - Initial selection (default: false/No).
    * @returns {Promise<boolean>} True for Yes, False for No.
    * @protected
    */
   protected async promptYesNo(
     question: string,
-    initialValue = false,
+    initialValue = true,
   ): Promise<boolean> {
     return new Utils.Confirm({ title: question, initialValue }).run();
   }
