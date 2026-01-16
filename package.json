@@ -1,6 +1,6 @@
 {
   "name": "digester",
-  "version": "17.0.0-ai",
+  "version": "17.1.0-ai",
   "description": "High-performance codebase context generator and AI operations toolkit optimized for Bun.",
   "module": "src/index.ts",
   "type": "module",

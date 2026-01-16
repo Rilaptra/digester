@@ -1,5 +1,15 @@
 # Changelog
 
+## [17.1.0-ai] - 2026-01-16
+- ✨ Introduce the `ansi` command for generating ANSI gradient art.
+- Supports text input or reading from a file.
+- Customizable start and end colors.
+- Configurable output filename.
+- Interactive prompts for ease of use.
+- Includes color parsing and gradient calculation logic.
+- Uses Bun's color library for ANSI code generation.
+- Handles empty lines and ensures proper formatting.
+
 ## [17.0.0-ai] - 2026-01-16
 - ✨ Renamed the CLI from `prompter` to `digester` for better clarity and branding.
 - 📝 Updated the README with a new logo, description, and overview of the tool's capabilities.

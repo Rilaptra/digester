@@ -1,132 +1,152 @@
 <div align="center">
+# ⚡ DIGESTER
 
+```text
+░███████   ░██                                    ░██
+░██   ░██                                         ░██
+░██    ░██ ░██ ░████████  ░███████   ░███████  ░████████  ░███████  ░██░████
+░██    ░██ ░██░██    ░██ ░██    ░██ ░██           ░██    ░██    ░██ ░███
+░██    ░██ ░██░██    ░██ ░█████████  ░███████     ░██    ░█████████ ░██
+░██   ░██  ░██░██   ░███ ░██               ░██    ░██    ░██        ░██
+░███████   ░██ ░█████░██  ░███████   ░███████      ░████  ░███████  ░██
+                     ░██
+               ░███████
 ```
-      d8b d8b                    .d8888b.  888
-      888 Y8P                   d88P  Y88b 888
-      888                       888    888 888
-  .d88888 888  .d88b.8  .d88b.  Y88b.      888888 .d88b.  888d888
- d88" 888 888 d88P"88b d8P  Y8b  "Y888b.   888   d8P  Y8b 888P"
- 888  888 888 888  888 88888888     "Y88b. 888   88888888 888
- Y88b 888 888 Y88b 888 Y8b.     Y8b. d888Y Y88b. Y8b.     888
-  "Y88888 888  "Y88888  "Y8888   "Y8888P"   "Y888 "Y8888  888
-                   888
-              Y8b d88P
-               "Y88P"
-```
 
-[![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh)
-[![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![GitHub](https://img.shields.io/badge/GitHub-Rilaptra%2Fdigester-black?style=for-the-badge&logo=github)](https://github.com/Rilaptra/digester)
+![Version](https://img.shields.io/badge/Version-17.1.0--ai-blue?style=for-the-badge&logo=git)
+![Runtime](https://img.shields.io/badge/Runtime-Bun_v1.2+-black?logo=bun&style=for-the-badge)
+![Security](https://img.shields.io/badge/Security-Secret_Scan-red?style=for-the-badge&logo=shield)
+![Build](https://img.shields.io/badge/Build-Native_Binary-green?style=for-the-badge)
 
-**High-Performance Codebase Context Generator & AI Operations Toolkit**
+> **The Ultimate AI Operations Agent & Codebase Context Engine.**
+> Built for speed on low-end hardware. Zero dependencies bloat. 100% Bun Native.
 
-_Optimized for Bun runtime._
-
-[Report Bug](https://github.com/Rilaptra/digester/issues) · [Request Feature](https://github.com/Rilaptra/digester/issues)
+**Digester** is not just a context generator. It is a highly optimized CLI toolkit that turns your codebase into a liquid format for LLMs, automates your Git workflows with AI, traces dependencies, and protects your secrets—all running on a toaster-friendly memory footprint.
 
 </div>
 
 ---
 
-## Overview
+## 🌟 Why Digester?
 
-**Digester** is a robust Command Line Interface (CLI) tool engineered to streamline the workflow of modern developers working with Large Language Models (LLMs). By intelligently scanning, processing, and aggregating codebase context into a structured Markdown format, Digester enables seamless prompt engineering and enhances the efficiency of AI-assisted development.
+- **⚡ Blazingly Fast:** Powered by Bun, scanning thousands of files in milliseconds.
+- **🎨 Custom TUI Engine:** No heavy prompt libraries. Built-in, zero-allocation UI components (Grid Select, Editors, Spinners).
+- **🛡️ Security Guard:** AI scans your staged changes for leaked secrets (API Keys, tokens) _before_ you commit.
+- **🧠 Dependency Tracing:** Recursively maps out imports from an entry point to create a focused context graph.
+- **🌍 Remote Ops:** Clone, scan, and digest remote GitHub repositories in temporary sandboxes without polluting your disk.
 
-Built on the **Bun** runtime, it offers exceptional performance, minimizing overhead while delivering powerful utilities for context generation, automated commit messaging, and project configuration.
+---
 
-## Key Features
+## 🚀 Key Features
 
-- **Context Aggregation**: Rapidly scans directories to generate a single, token-optimized Markdown file containing your codebase structure and content, ready for LLM consumption.
-- **Smart Filtering**: Automatically respects `.gitignore` and intelligently excludes binary files, lockfiles, and other non-essential artifacts to conserve token usage.
-- **Tree Visualization**: Generates a clear, ASCII-based directory tree structure for better spatial understanding of the project.
-- **AI Operations**: Includes utilities like `commit` for AI-generated commit messages based on staged changes.
-- **Core Utilities**: specialized commands for system operations, including `hard-restart` for path correction and `open` for smart file navigation.
-- **Configurable**: Fully customizable via `prompter.config.json` to tailor scanning behavior and AI model preferences.
+### 1. 🤖 AI Auto-Ops Agent
 
-## Installation
+Stop writing commit messages manually.
 
-Ensure you have [Bun](https://bun.sh) installed on your system.
+- **Auto-Commit:** Analyzes `git diff`, writes Conventional Commits, and generates a bullet-point Changelog.
+- **Auto-Version:** Smart SemVer bumping (Major/Minor/Patch) based on code analysis.
+- **Pre-Push Hooks:** Runs configured scripts or TS files before pushing to ensure quality.
+
+### 2. 🗺️ Code Cartography
+
+Understand your project instantly.
+
+- **`digest tree`:** Visualize your project structure with smart file-type icons.
+- **`digest trace`:** Generate a markdown digest _only_ for files related to a specific entry point (e.g., `src/index.ts`).
+- **`digest git`:** Digest a remote repo URL directly (e.g., `digest git user/repo`).
+
+### 3. 🛠️ Developer Experience (DX)
+
+- **Auto-Build Watcher:** `digest autobuild` watches changes and recompiles with audio feedback.
+- **Scaffolder:** `digest gen` creates new Commands or Managers instantly.
+- **Self-Healing:** `digest update` pulls the latest version of itself and rebuilds locally.
+
+---
+
+## 📥 Installation
+
+Digester is optimized for **Bun**. Ensure you have it installed.
+
+### Option A: From Source (Recommended)
 
 ```bash
-# Clone the repository
-
-![Version](https://img.shields.io/badge/Version-17.0.0--ai-blue?style=for-the-badge)
+# 1. Clone
 git clone https://github.com/Rilaptra/digester.git
-
-# Navigate to the project directory
 cd digester
 
-# Install dependencies
+# 2. Install Deps
 bun install
 
-# Link the binary globally
-bun link
+# 3. Build & Setup (Adds to PATH)
+bun run setup
 ```
 
-## Usage
-
-Once installed, the CLI can be accessed via the `digest` command (or `prompter` if legacy aliases persist).
-
-### Context Generation
-
-The primary function of Digester is to scan your project and produce a digest file.
+### Option B: Quick Start (Dev Mode)
 
 ```bash
-# Scan the current directory
-digest scan
-
-# Scan specific directories or files
-digest scan src tests package.json
+bun install
+bun run dev
 ```
 
-The output file will be saved in the `out/` directory with a timestamped filename, e.g., `DIGEST_MyProject_1763261234.md`.
+---
 
-### Self-Reflection
+## 🎮 Command Reference
 
-To generate a digest of the Digester tool itself (useful for meta-development):
+| Command            | Alias     | Description                                                |
+| :----------------- | :-------- | :--------------------------------------------------------- |
+| `digest scan`      | `.`       | Scan current directory and generate context.               |
+| `digest commit`    | `ci`      | **AI Agent:** Auto-commit, version bump, changelog, push.  |
+| `digest check`     | `ck`      | Scan staged changes for secret leaks/security risks.       |
+| `digest git`       | `clone`   | Clone & digest a remote Git repository (URL or user/repo). |
+| `digest trace`     | `deps`    | Trace dependencies recursively from an entry file.         |
+| `digest tree`      | `t`       | Display project structure with icons & stats.              |
+| `digest source`    | `src`     | Self-digest: Scan the Digester source code itself.         |
+| `digest gen`       | `new`     | Scaffold new Commands or Managers.                         |
+| `digest config`    | `init`    | Generate default `prompter.config.json`.                   |
+| `digest autobuild` | `dev`     | Watch mode with auto-recompile & sound alerts.             |
+| `digest update`    | `upgrade` | Self-update Digester from the repo.                        |
+| `digest set-key`   | `auth`    | Set your Google Gemini API Key.                            |
+| `digest set-model` | `model`   | Switch AI Models (Flash/Pro).                              |
 
-```bash
-digest src
+---
+
+## ⚙️ Configuration
+
+Customize behavior via `prompter.config.json`:
+
+```json
+{
+  "ignoredPatterns": ["node_modules", "dist", ".git", ".next"],
+  "ignoredExts": [".png", ".jpg", ".lock", ".tsbuildinfo"],
+  "maxFileSizeKB": 500,
+  "prePushScripts": ["lint", "test"]
+}
 ```
 
-### AI Commit Assistant
+---
 
-Generate a conventional commit message based on your currently staged changes:
+## 🛡️ Architecture & Stack
 
-```bash
-digest commit
-```
+Designed for **Resilience** and **Performance**.
 
-### Configuration Management
+- **Runtime:** [Bun](https://bun.sh) (Native Spawn, IO, SQLite)
+- **Language:** TypeScript 5.0 (Strict)
+- **Architecture:**
+  - **Core:** `Scanner`, `DependencyTracer`, `CommandLoader`
+  - **Managers:** `AIManager` (Gemini), `GitManager`, `ConfigManager`
+  - **Utils:** Zero-alloc Logger, Custom TUI System
+- **Linter/Formatter:** Biome
 
-Manage your API keys and model configurations:
+---
 
-```bash
-# Set your AI Model
-digest set model gemini-1.5-pro
+## 👤 Author
 
-# Configure API Key
-digest set key YOUR_API_KEY
-```
+**Rizqi Lasheva (Rilaptra)**
+_Civil Engineering Student x Code Wizard._
 
-### Utilities
+- 🌐 [Eryzsh Dashboard](https://erzysh.vercel.app)
+- 🐙 [GitHub](https://github.com/Rilaptra)
 
-- **`digest tree`**: Display the directory structure without generating a full file report.
-- **`digest open`**: Interactively open files or folders in your default editor or file explorer.
-- **`digest hard-restart`**: Force restart the runtime process (useful for troubleshooting path issues on Windows).
+---
 
-## Configuration
-
-Digester uses `prompter.config.json` for project-specific settings. You can define custom ignore patterns and modify default behaviors here.
-
-## Author
-
-**Rizqi Lasheva Purnama Putra (Rilaptra)**
-
-- **Website**: [https://erzysh.vercel.app](https://erzysh.vercel.app)
-- **GitHub**: [https://github.com/Rilaptra](https://github.com/Rilaptra)
-
-## License
-
-This project is licensed under the MIT License.
+> _"Code by Human, Optimized by Logic, Powered by AI."_ ⚡
