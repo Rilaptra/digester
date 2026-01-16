@@ -1,5 +1,13 @@
 # Changelog
 
+## [17.0.0-ai] - 2026-01-16
+- ✨ Renamed the CLI from `prompter` to `digester` for better clarity and branding.
+- 📝 Updated the README with a new logo, description, and overview of the tool's capabilities.
+- 🛠️ Modified the `package.json` to reflect the name change, add versioning, description, repository details, keywords, author information, and license.
+- ⚙️ Updated the `bin` section in `package.json` to include both `digest` and `prompter` aliases for backward compatibility.
+- 📖 Revised the documentation to reflect the new name and features, including installation instructions, usage examples, and configuration options.
+- 🚀 Improved the overall developer experience with a more polished and informative README.
+
 ## [16.9.0-ai] - 2026-01-16
 - ✨ Implemented recursive file system navigation for the 'cd' command.
 - Users can now tab-complete directory paths, providing a more intuitive experience.

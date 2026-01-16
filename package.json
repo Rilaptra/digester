@@ -1,7 +1,45 @@
 {
-  "name": "prompter",
+  "name": "digester",
+  "version": "17.0.0-ai",
+  "description": "High-performance codebase context generator and AI operations toolkit optimized for Bun.",
   "module": "src/index.ts",
   "type": "module",
+  "bin": {
+    "digest": "src/index.ts",
+    "prompter": "src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rilaptra/digester.git"
+  },
+  "keywords": [
+    "cli",
+    "ai",
+    "llm",
+    "context",
+    "digest",
+    "bun",
+    "typescript",
+    "automation",
+    "productivity"
+  ],
+  "author": {
+    "name": "Rizqi Lasheva Purnama Putra",
+    "url": "https://erzysh.vercel.app"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Rilaptra/digester/issues"
+  },
+  "homepage": "https://github.com/Rilaptra/digester#readme",
+  "scripts": {
+    "codegen": "bun run scripts/generate-registry.ts",
+    "build": "bun run codegen && bun build ./src/index.ts --outfile ./dist/index.js --target bun",
+    "b": "bun run codegen && bun build ./src/index.ts --outfile ./dist/index.js --target bun",
+    "dev": "bun run codegen && bun src/index.ts",
+    "start": "bun dist/index.js",
+    "setup": "bun run build && bun src/index.ts setup"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",
     "bun-types": "latest"
@@ -12,14 +50,5 @@
     "chalk": "^5.6.2",
     "cli-table3": "^0.6.5",
     "ora": "^9.0.0"
-  },
-  "scripts": {
-    "codegen": "bun run scripts/generate-registry.ts",
-    "build": "bun run codegen && bun build ./src/index.ts --outfile ./dist/index.js --target bun",
-    "b": "bun run codegen && bun build ./src/index.ts --outfile ./dist/index.js --target bun",
-    "dev": "bun run codegen && bun src/index.ts",
-    "start": "bun dist/index.js",
-    "setup": "bun run build && bun src/index.ts setup"
-  },
-  "version": "16.9.0-ai"
+  }
 }
