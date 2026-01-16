@@ -1,5 +1,13 @@
 # Changelog
 
+## [16.7.0-ai] - 2026-01-16
+- ✨ Implement auto-build command for automatic recompilation on file changes.
+- 🛠️ Refactor commands to use a consistent prompt interface with TUI components.
+- ⚡️ Add interactive tests for TUI components (Select, MultiSelect, Confirm, Editor, SpinNumber).
+- 📝 Update commands to use the new prompt utilities for a more consistent user experience.
+- 🧹 Clean up and refactor various utility functions for improved readability and maintainability.
+- 🐛 Fix minor issues in existing commands related to prompt handling and error messages.
+
 ## [16.6.0-ai] - 2026-01-16
 - ✨ Added interactive TUI elements for enhanced user experience.
 - 📝 Implemented a `Confirm` class for boolean prompts, allowing users to confirm actions.

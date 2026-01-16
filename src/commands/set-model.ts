@@ -21,11 +21,15 @@ export class SetModelCommand extends BaseCommand {
       spinner.stop();
 
       if (models.length === 0) throw new Error("No models found.");
+      console.log(models);
+      // models.forEach((name) => {
+      //   name = name.trim();
+      // });
 
       const selection = await this.promptSelectV2(
         chalk.cyan("🤖 Choose AI Model"),
         models,
-        { columns: 2 }
+        { columns: 1 },
       );
       await ConfigManager.saveAuth({ model: selection });
       this.success(`Model set to: ${chalk.bold(selection)}`);

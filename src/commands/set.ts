@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { BaseCommand } from "../core/BaseCommand.js";
-import { CommandLoader } from "../core/CommandLoader.js";
+import type { CommandLoader } from "../core/CommandLoader.js";
 
 export class SetCommand extends BaseCommand {
   public name = "set";
@@ -10,7 +10,7 @@ export class SetCommand extends BaseCommand {
 
   public async execute(
     _args: string[],
-    context: { loader: CommandLoader }
+    context: { loader: CommandLoader },
   ): Promise<void> {
     // 1. Get all available commands
     const allCommands = context.loader.getAllCommands();
@@ -19,7 +19,7 @@ export class SetCommand extends BaseCommand {
     const setCommands = allCommands.filter(
       (cmd) =>
         (cmd.name.startsWith("set-") || cmd.aliases.includes("set")) &&
-        cmd.name !== "set"
+        cmd.name !== "set",
     );
 
     if (setCommands.length === 0) {
@@ -40,7 +40,7 @@ export class SetCommand extends BaseCommand {
     const selection = await this.promptSelectV2(
       chalk.cyan("⚙  Configuration Menu"),
       options,
-      { columns: 2, allowCustom: false }
+      { columns: 2, allowCustom: false },
     );
 
     // 5. specific behavior for "Other" if allowCustom was true (not currently used but good for future)

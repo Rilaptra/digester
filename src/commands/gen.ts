@@ -2,7 +2,6 @@ import { join } from "node:path";
 import chalk from "chalk";
 import { SYSTEM } from "../constants/defaults.js";
 import { BaseCommand } from "../core/BaseCommand.js";
-import { promptText } from "../utils/prompts.js";
 
 export class GenCommand extends BaseCommand {
   public name = "gen";
@@ -17,7 +16,7 @@ export class GenCommand extends BaseCommand {
       "Manager (src/managers)",
     ]);
 
-    const nameRaw = await promptText(
+    const nameRaw = await this.promptText(
       chalk.yellow(`👉 Enter ${type} name (e.g. 'Deploy'): `),
     );
     if (!nameRaw) return;

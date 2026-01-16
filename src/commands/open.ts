@@ -16,7 +16,7 @@ export class OpenCommand extends BaseCommand {
       const selection = await this.promptSelectV2(
         "Where do you want to open the source code?",
         ["System Default", "Visual Studio Code", "Explorer", "Cancel"],
-        { columns: 2 }
+        { columns: 2 },
       );
 
       if (selection === "Cancel") {
@@ -53,14 +53,14 @@ export class OpenCommand extends BaseCommand {
 
     if (apps.vscode.includes(lowerApp)) {
       const spinner = this.spinner(
-        chalk.cyan("📂 Opening Source Code Using Visual Studio Code...")
+        chalk.cyan("📂 Opening Source Code Using Visual Studio Code..."),
       );
       try {
         Bun.spawnSync(["code", SYSTEM.ROOT_DIR], {
           stdio: ["ignore", "ignore", "ignore"], // Detach output to avoid clutter
         });
         spinner.succeed("Opened Source Code Using Visual Studio Code");
-      } catch (e) {
+      } catch {
         spinner.fail(chalk.red("Failed to open VS Code. Is it installed?"));
       }
       return;
@@ -68,7 +68,7 @@ export class OpenCommand extends BaseCommand {
 
     if (apps.explorer.includes(lowerApp)) {
       const spinner = this.spinner(
-        chalk.cyan("📂 Opening Source Code in Explorer...")
+        chalk.cyan("📂 Opening Source Code in Explorer..."),
       );
       Bun.spawnSync(["explorer", SYSTEM.ROOT_DIR]);
       spinner.succeed("Opened Source Code folder");

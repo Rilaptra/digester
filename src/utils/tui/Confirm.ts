@@ -1,20 +1,38 @@
 import { emitKeypressEvents } from "node:readline";
 import chalk from "chalk";
 
+/**
+ * Configuration options for the Confirm prompt.
+ */
 export interface ConfirmConfig {
+  /** The question or title to display. */
   title: string;
+  /** The initial boolean value (true for Yes, false for No). Default is false (safety). */
   initialValue?: boolean;
 }
 
+/**
+ * An interactive Yes/No confirmation prompt.
+ * Uses strict boolean values and provides clear visual feedback.
+ */
 export class Confirm {
   private config: ConfirmConfig;
   private value: boolean;
 
+  /**
+   * Creates a new Confirm prompt instance.
+   * @param {ConfirmConfig} config - Initial configuration.
+   */
   constructor(config: ConfirmConfig) {
     this.config = config;
     this.value = config.initialValue ?? false; // Default false (Safety first)
   }
 
+  /**
+   * Starts the interactive prompt and waits for user input.
+   *
+   * @returns {Promise<boolean>} Resolves to true if confirmed (Yes), false otherwise (No).
+   */
   public async run(): Promise<boolean> {
     const { stdin, stdout } = process;
 

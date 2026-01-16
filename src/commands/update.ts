@@ -16,7 +16,9 @@ export class UpdateCommand extends BaseCommand {
     // 1. Check if running from a Git Repo
     if (!GitManager.isRepo(targetDir)) {
       this.error("❌ Digester is not installed via Git. Cannot auto-update.");
-      this.dim("   Try cloning the repo directly: git clone https://github.com/Rilaptra/digester.git");
+      this.dim(
+        "   Try cloning the repo directly: git clone https://github.com/Rilaptra/digester.git",
+      );
       return;
     }
 
@@ -24,7 +26,9 @@ export class UpdateCommand extends BaseCommand {
 
     try {
       // 2. Fetch Origin
-      const fetchProc = Bun.spawn(["git", "fetch", "origin"], { cwd: targetDir });
+      const fetchProc = Bun.spawn(["git", "fetch", "origin"], {
+        cwd: targetDir,
+      });
       await fetchProc.exited;
 
       // 3. Compare Local vs Remote HEAD
@@ -37,7 +41,9 @@ export class UpdateCommand extends BaseCommand {
       }
 
       if (localHash === remoteHash) {
-        spinner.succeed(chalk.green("You are already on the latest version! ✨"));
+        spinner.succeed(
+          chalk.green("You are already on the latest version! ✨"),
+        );
         this.dim(`   Current Hash: ${localHash.substring(0, 7)}`);
         return;
       }
@@ -46,7 +52,7 @@ export class UpdateCommand extends BaseCommand {
       spinner.stop();
 
       const confirm = await this.promptYesNo(
-        `${chalk.bold("🔥 New version available!")} Update now?`
+        `${chalk.bold("🔥 New version available!")} Update now?`,
       );
 
       if (!confirm) {
@@ -56,16 +62,16 @@ export class UpdateCommand extends BaseCommand {
 
       // 4. Perform Update
       const updateSpinner = this.spinner("Pulling latest changes...");
-      
+
       // GIT PULL
-      const pullProc = Bun.spawn(["git", "pull", "origin", "main"], { 
+      const pullProc = Bun.spawn(["git", "pull", "origin", "main"], {
         cwd: targetDir,
-        stderr: "pipe" 
+        stderr: "pipe",
       });
       const pullExit = await pullProc.exited;
       if (pullExit !== 0) {
-         const err = await new Response(pullProc.stderr).text();
-         throw new Error(`Git pull failed: ${err}`);
+        const err = await new Response(pullProc.stderr).text();
+        throw new Error(`Git pull failed: ${err}`);
       }
       updateSpinner.text = "Installing dependencies (bun install)...";
 
@@ -80,12 +86,11 @@ export class UpdateCommand extends BaseCommand {
       await buildProc.exited;
 
       updateSpinner.succeed("✅ Digester successfully updated!");
-      
+
       generateLog(
         { type: "success", raw: true },
-        `${chalk.bgGreen.black("\n RESTART REQUIRED ")} Please restart your terminal/command.`
+        `${chalk.bgGreen.black("\n RESTART REQUIRED ")} Please restart your terminal/command.`,
       );
-
     } catch (e) {
       spinner.fail(chalk.red(`Update failed: ${(e as Error).message}`));
     }

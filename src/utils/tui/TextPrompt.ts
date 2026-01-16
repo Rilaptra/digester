@@ -1,26 +1,50 @@
 import { emitKeypressEvents } from "node:readline";
 import chalk from "chalk";
 
+/**
+ * Configuration options for the TextPrompt.
+ */
 export interface TextPromptConfig {
+  /** The question or title label to display. */
   title: string;
+  /** Optional placeholder text shown when input is empty. */
   placeholder?: string;
+  /** Initial value to populate the input with. */
   initialValue?: string;
+  /**
+   * Validation function. Returns true if valid, or an error string if invalid.
+   * Can be async.
+   */
   validate?: (value: string) => string | boolean | Promise<string | boolean>;
+  /** If true, masks the input characters (for passwords). */
   password?: boolean;
 }
 
+/**
+ * An interactive text input CLI prompt.
+ * Supports validation, password masking, cursor navigation, and placeholders.
+ */
 export class TextPrompt {
   private config: TextPromptConfig;
   private value = "";
   private cursorPos = 0;
   private errorMsg = "";
 
+  /**
+   * Creates a new TextPrompt instance.
+   * @param {TextPromptConfig} config - Initial configuration.
+   */
   constructor(config: TextPromptConfig) {
     this.config = config;
     this.value = config.initialValue || "";
     this.cursorPos = this.value.length;
   }
 
+  /**
+   * Starts the interactive prompt and waits for user input.
+   *
+   * @returns {Promise<string>} The user's input string.
+   */
   public async run(): Promise<string> {
     const { stdin, stdout } = process;
 

@@ -30,7 +30,7 @@ export class ScanCommand extends BaseCommand {
       );
 
       if (mode.startsWith("Custom")) {
-        const input = await UtilFunctions.promptText(
+        const input = await this.promptText(
           chalk.yellow(
             "👉 Enter paths (space separated, e.g. 'src/utils tests'): "
           )

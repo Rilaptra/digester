@@ -1,7 +1,8 @@
 // 🤖 AUTO-GENERATED REGISTRY
-// 📅 Generated at: 2026-01-15T16:02:40.821Z
+// 📅 Generated at: 2026-01-16T01:57:27.232Z
 // ⚠️ DO NOT EDIT MANUALLY - Run 'bun run codegen' instead
 
+export * from "./autobuild.js";
 export * from "./check.js";
 export * from "./commit.js";
 export * from "./config.js";

@@ -1,13 +1,15 @@
 // --- src/commands/test.ts ---
 import chalk from "chalk";
 import { BaseCommand } from "../core/BaseCommand.js";
-import { Select } from "../utils/tui/Select.js";
 import {
   AutoComplete,
   Confirm,
   MultiSelect,
   TextPrompt,
 } from "../utils/index.js";
+import { Editor } from "../utils/tui/Editor.js";
+import { Select } from "../utils/tui/Select.js";
+import { SpinNumber } from "../utils/tui/SpinNumber.js";
 
 export class TestCommand extends BaseCommand {
   public name = "test";
@@ -19,7 +21,7 @@ export class TestCommand extends BaseCommand {
 
     // --- TEST 1: VERTICAL PAGINATION (Heavy List) ---
     this.log(
-      chalk.yellow("\n📜 TEST 1: Vertical Pagination (100 items, 7 visible)")
+      chalk.yellow("\n📜 TEST 1: Vertical Pagination (100 items, 7 visible)"),
     );
     this.dim("   Try scrolling down fast. Watch the scrollbar on the right.");
 
@@ -39,7 +41,7 @@ export class TestCommand extends BaseCommand {
           desc: isDangerous
             ? "High Risk"
             : `${(Math.random() * 100).toFixed(1)} KB`,
-        }
+        },
       );
     }
 
@@ -49,8 +51,8 @@ export class TestCommand extends BaseCommand {
     // --- TEST 2: GRID PAGINATION (The Matrix) ---
     this.log(
       chalk.yellow(
-        "\n▦ TEST 2: Grid Pagination (60 items, 4 Columns, 5 Rows visible)"
-      )
+        "\n▦ TEST 2: Grid Pagination (60 items, 4 Columns, 5 Rows visible)",
+      ),
     );
     this.dim("   Navigate using arrow keys. It should scroll smoothly.");
 
@@ -75,7 +77,7 @@ export class TestCommand extends BaseCommand {
 
     // --- TEST 3: MULTI-SELECT GRID (New Feature) ---
     this.log(
-      chalk.yellow("\n☑ TEST 3: Multi-Select + Grid (Select Ingredients)")
+      chalk.yellow("\n☑ TEST 3: Multi-Select + Grid (Select Ingredients)"),
     );
     this.dim("   Use <Space> to toggle, Arrows to move, <Enter> to submit.");
 
@@ -150,7 +152,7 @@ export class TestCommand extends BaseCommand {
     // --- TEST 6: AUTO COMPLETE ---
     this.log(chalk.yellow("\n🔍 TEST 6: Auto Complete (Git Commands)"));
     this.dim(
-      "   Type 'c' to see suggestions. Use Arrows to select. TAB to autofill."
+      "   Type 'c' to see suggestions. Use Arrows to select. TAB to autofill.",
     );
 
     const gitCmds = [
@@ -204,5 +206,39 @@ export class TestCommand extends BaseCommand {
     }).run();
 
     this.success(`You are going to: ${country}`);
+
+    // --- TEST 8: SPIN NUMBER ---
+    this.log(chalk.yellow("\n🔢 TEST 8: Numeric Input (Arrow Keys)"));
+    const port = await new SpinNumber({
+      title: "Select Port Number",
+      min: 3000,
+      max: 9000,
+      initial: 3000,
+      step: 1, // Shift+Arrow = +10
+    }).run();
+    this.success(`Server starting on port ${port}`);
+
+    const memory = await new SpinNumber({
+      title: "Max Memory Limit",
+      min: 128,
+      max: 4096,
+      initial: 512,
+      step: 128,
+      unit: "MB",
+    }).run();
+    this.success(`Memory set to ${memory}MB`);
+
+    // --- TEST 9: MULTILINE EDITOR ---
+    this.log(chalk.yellow("\n📝 TEST 9: Multiline Editor (Mini Vim)"));
+    this.dim("   Type freely. Enter for newline. Ctrl+S to save.");
+
+    const bio = await new Editor({
+      title: "Write your commit message description:",
+      placeholder: "Explain why you made these changes...",
+    }).run();
+
+    this.createBox(bio, "COMMIT MESSAGE BODY");
+
+    this.createBox("🎉 DEMO COMPLETED SUCCESSFULLY");
   }
 }

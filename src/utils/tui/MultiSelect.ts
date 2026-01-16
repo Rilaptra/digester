@@ -1,25 +1,48 @@
 // --- src/utils/tui/MultiSelect.ts ---
+/** biome-ignore-all lint/suspicious/noControlCharactersInRegex: <explanation:  is a control character> */
 import { emitKeypressEvents } from "node:readline";
 import chalk from "chalk";
 
 // --- TYPES ---
+/**
+ * Represents a single option within the MultiSelect menu.
+ * @template ValueType The type of the value associated with the option.
+ */
 export interface MultiSelectOption<ValueType> {
+  /** The display label for the option. */
   label: string;
+  /** The underlying value associated with the option. */
   value: ValueType;
+  /** Optional description text displayed alongside the option. */
   description?: string;
+  /** If true, the option cannot be selected or deselected. */
   disabled?: boolean;
 }
 
+/**
+ * Configuration options for the MultiSelect prompt.
+ */
 export interface MultiSelectConfig {
+  /** The title or question to display above the menu. */
   title?: string;
+  /** The number of columns to display. Default is 1. */
   columns?: number;
+  /** Whether to clear the menu output after submission. Default is true. */
   clearOnSubmit?: boolean;
+  /** The maximum number of items visible at once. Default is 7. */
   pageSize?: number;
+  /** Minimum number of items that must be selected before submission. */
   minSelect?: number;
 }
 
 // --- CLASS DEFINITION ---
 
+/**
+ * An interactive multi-select CLI prompt.
+ * Features grid layout, pagination, min-selection validation, and keyboard navigation.
+ *
+ * @template ValueType The type of the values returned. Default is string.
+ */
 export class MultiSelect<ValueType = string> {
   private options: MultiSelectOption<ValueType>[] = [];
   private config: MultiSelectConfig = {
@@ -32,41 +55,71 @@ export class MultiSelect<ValueType = string> {
   private focusedIndex = 0;
   private scrollOffset = 0;
 
+  /**
+   * Creates a new MultiSelect prompt instance.
+   * @param {MultiSelectConfig} [config] - Initial configuration.
+   */
   constructor(config?: MultiSelectConfig) {
     if (config) this.config = { ...this.config, ...config };
   }
 
-  // --- HELPER: Strip ANSI codes untuk hitung panjang string akurat ---
-  private stripAnsi(str: string): string {
-    return str.replace(/\x1B\[[0-9;]*m/g, "");
-  }
-
   // --- BUILDER METHODS ---
 
+  /**
+   * Sets the title/question of the prompt.
+   * @param {string} text - The title text.
+   * @returns {this} The current instance for chaining.
+   */
   public title(text: string): this {
     this.config.title = text;
     return this;
   }
 
+  /**
+   * Sets the number of columns for the layout.
+   * @param {number} count - Number of columns.
+   * @returns {this} The current instance for chaining.
+   */
   public columns(count: number): this {
     this.config.columns = count;
     return this;
   }
 
+  /**
+   * Sets the page size (max visible rows).
+   * @param {number} count - Page size.
+   * @returns {this} The current instance for chaining.
+   */
   public pageSize(count: number): this {
     this.config.pageSize = count;
     return this;
   }
 
+  /**
+   * Sets the minimum number of items that must be selected.
+   * @param {number} count - Minimum count.
+   * @returns {this} The current instance for chaining.
+   */
   public minSelect(count: number): this {
     this.config.minSelect = count;
     return this;
   }
 
+  /**
+   * Adds an option to the multi-select menu.
+   *
+   * @param {string} label - The display label.
+   * @param {ValueType} value - The value to return if selected.
+   * @param {Object} [meta] - Additional metadata.
+   * @param {string} [meta.desc] - Description text.
+   * @param {boolean} [meta.disabled] - Whether the option is disabled.
+   * @param {boolean} [meta.selected] - Whether the option is pre-selected.
+   * @returns {this} The current instance for chaining.
+   */
   public add(
     label: string,
     value: ValueType,
-    meta?: { desc?: string; disabled?: boolean; selected?: boolean }
+    meta?: { desc?: string; disabled?: boolean; selected?: boolean },
   ): this {
     const idx = this.options.length;
     this.options.push({
@@ -83,6 +136,12 @@ export class MultiSelect<ValueType = string> {
 
   // --- RUNNER ---
 
+  /**
+   * Starts the interactive prompt and waits for user input.
+   *
+   * @returns {Promise<ValueType[]>} A promise that resolves to an array of selected values.
+   * @throws {Error} If no options are provided.
+   */
   public async run(): Promise<ValueType[]> {
     if (this.options.length === 0) {
       throw new Error("MultiSelect: No options provided!");
@@ -111,7 +170,7 @@ export class MultiSelect<ValueType = string> {
       }
       this.scrollOffset = Math.max(
         0,
-        Math.min(this.scrollOffset, totalDataRows - viewportHeight)
+        Math.min(this.scrollOffset, totalDataRows - viewportHeight),
       );
       if (totalDataRows <= viewportHeight) this.scrollOffset = 0;
 
@@ -160,8 +219,8 @@ export class MultiSelect<ValueType = string> {
             // Pointer: "❯ " (2 chars) atau "  "
             const pointer = isFocused ? chalk.cyan("❯ ") : "  ";
 
-            // Icon: "◉" / "◯" / "🔒"
-            let iconStr = isSelected ? "◉" : "◯";
+            // Icon: "○" / "●" / "🔒"
+            let iconStr = isSelected ? "●" : "○";
             if (opt.disabled) iconStr = "🔒";
 
             // Warnai Icon
@@ -227,7 +286,7 @@ export class MultiSelect<ValueType = string> {
       } else {
         stdout.write(
           chalk.dim(" (Press <space> to select, <enter> to complete)") +
-            "\x1B[K\n"
+            "\x1B[K\n",
         );
       }
 
@@ -321,7 +380,7 @@ export class MultiSelect<ValueType = string> {
                 : chalk.dim("None");
 
             stdout.write(
-              `${chalk.cyan("? ")} ${chalk.bold(title)} ${preview}\n`
+              `${chalk.cyan("? ")} ${chalk.bold(title)} ${preview}\n`,
             );
 
             resolve(results);

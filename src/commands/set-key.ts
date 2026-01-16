@@ -2,7 +2,6 @@ import chalk from "chalk";
 import { SYSTEM } from "../constants/defaults.js";
 import { BaseCommand } from "../core/BaseCommand.js";
 import { ConfigManager } from "../managers/ConfigManager.js";
-import { promptText } from "../utils/prompts.js";
 
 export class SetKeyCommand extends BaseCommand {
   public name = "set-key";
@@ -12,7 +11,9 @@ export class SetKeyCommand extends BaseCommand {
   public async execute(args: string[]): Promise<void> {
     let key = args[0];
     if (!key) {
-      key = await promptText(chalk.cyan("🔑 Enter Google Gemini API Key: "));
+      key = await this.promptText(
+        chalk.cyan("🔑 Enter Google Gemini API Key: ")
+      );
     }
 
     if (!key) {

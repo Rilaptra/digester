@@ -1,8 +1,8 @@
 // --- src/utils/filesystem.ts ---
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
+import { isAbsolute, normalize, resolve } from "node:path";
 import { generateLog } from "./logger.js";
-import { isAbsolute, resolve, normalize } from "node:path";
 
 /**
  * Opens a file or directory using the default system application.
@@ -80,7 +80,7 @@ export async function smartOpenFolder(path: string): Promise<void> {
 
       foreach ($win in $shell.Windows()) {
           try {
-              # Convert URL (file:///C:/...) to Local Path (C:\...)
+              # Convert URL (file:///C:/...) to Local Path (C:...)
               $path = [Uri]$win.LocationURL;
               $localPath = $path.LocalPath;
               
@@ -104,7 +104,7 @@ export async function smartOpenFolder(path: string): Promise<void> {
       Bun.spawn(["powershell", "-NoProfile", "-Command", psCommand], {
         stdio: ["ignore", "ignore", "ignore"], // Fire and forget, keep CLI clean
       });
-    } catch (e) {
+    } catch {
       // Fallback if PowerShell fails
       spawn("explorer", [targetPath], { detached: true }).unref();
     }

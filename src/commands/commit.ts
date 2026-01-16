@@ -5,7 +5,6 @@ import { BaseCommand } from "../core/BaseCommand.js";
 import { AIManager } from "../managers/AIManager.js";
 import { ConfigManager } from "../managers/ConfigManager.js";
 import { GitManager } from "../managers/GitManager.js";
-import { promptText } from "../utils/index.js";
 import { generateLog } from "../utils/logger.js";
 
 export class CommitCommand extends BaseCommand {
@@ -56,7 +55,7 @@ export class CommitCommand extends BaseCommand {
       );
 
       if (addRemote) {
-        const url = await promptText(
+        const url = await this.promptText(
           chalk.cyan("👉 Enter Remote URL (e.g., git@github.com:u/repo.git): ")
         );
         if (url && url.length > 5) {
@@ -462,7 +461,7 @@ jobs:
       }
 
       if (pushStrategy === "Create PR Branch (New Branch)") {
-        const branchName = await promptText(
+        const branchName = await this.promptText(
           chalk.cyan("👉 Enter new branch name (e.g. feat/new-ui): ")
         );
 

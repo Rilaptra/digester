@@ -1,6 +1,6 @@
 import chalk from "chalk";
-import { BaseCommand } from "../core/BaseCommand.js";
 import { SYSTEM } from "../constants/defaults.js";
+import { BaseCommand } from "../core/BaseCommand.js";
 import { generateLog } from "../utils/logger.js";
 
 export class HardRestartCommand extends BaseCommand {
@@ -13,7 +13,7 @@ export class HardRestartCommand extends BaseCommand {
     const selection = await this.promptSelectV2(
       chalk.redBright("🛑 Are you sure you want to restart current build?"),
       ["Yes", "No"],
-      { allowCustom: false, columns: 2 }
+      { allowCustom: false, columns: 2 },
     );
     if (selection === "No") {
       this.info("Aborted");

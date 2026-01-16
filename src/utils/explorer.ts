@@ -1,9 +1,9 @@
-import chalk from "chalk";
-import { dirname, join, relative } from "node:path";
 import type { Dirent } from "node:fs";
-import { generateLog } from "./logger.js";
-import { promptSelectV2 } from "./prompts.js";
 import { readdir } from "node:fs/promises";
+import { dirname, join, relative } from "node:path";
+import chalk from "chalk";
+import { generateLog } from "./logger.js";
+import { Select } from "./tui/Select.js";
 
 /**
  * Interactive File Explorer to select a single file.
@@ -51,29 +51,26 @@ export async function promptFileExplorer(
     folders.sort((a, b) => a.name.localeCompare(b.name));
     files.sort((a, b) => a.name.localeCompare(b.name));
 
-    const choices: string[] = [];
-
-    // Add "Go Back" if not at root (or strictly enforce containment)
-    // We allow going up freely for flexibility, but you can clamp it if needed.
-    choices.push(".. (Up Level)");
-
-    folders.forEach((f) => {
-      choices.push(`📂 ${f.name}/`);
-    });
-    files.forEach((f) => {
-      choices.push(`📄 ${f.name}`);
-    });
-    choices.push("❌ Cancel");
-
     // 4. Interactive Prompt
     // Use columns=2 for compact view if many items, else 1
     const columns = folders.length + files.length > 10 ? 2 : 1;
 
-    const selection = await promptSelectV2(
-      "Select a file or navigate:",
-      choices,
-      { columns },
-    );
+    const select = new Select<string>()
+      .title("Select a file or navigate:")
+      .columns(columns);
+
+    // Add "Go Back"
+    select.add(".. (Up Level)", ".. (Up Level)");
+
+    folders.forEach((f) => {
+      select.add(`📂 ${f.name}/`, `📂 ${f.name}/`);
+    });
+    files.forEach((f) => {
+      select.add(`📄 ${f.name}`, `📄 ${f.name}`);
+    });
+    select.add("❌ Cancel", "❌ Cancel");
+
+    const selection = await select.run();
 
     // 5. Handle Selection
     if (selection === "❌ Cancel") return null;

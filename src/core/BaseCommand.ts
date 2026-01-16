@@ -47,7 +47,7 @@ export abstract class BaseCommand {
    */
   public abstract execute(
     args: string[],
-    context?: { loader: CommandLoader }
+    context?: { loader: CommandLoader },
   ): Promise<void>;
 
   /**
@@ -139,7 +139,7 @@ export abstract class BaseCommand {
         borderStyle: "round",
         title: title ? chalk.cyan(title) : undefined,
         borderColor: "cyan",
-      })
+      }),
     );
   }
 
@@ -164,8 +164,43 @@ export abstract class BaseCommand {
    * @returns {Promise<boolean>} True for Yes, False for No.
    * @protected
    */
-  protected async promptYesNo(question: string): Promise<boolean> {
-    return Utils.promptYesNo(question);
+  /**
+   * Prompts the user with a Yes/No question.
+   *
+   * @param {string} question - The question to ask.
+   * @param {boolean} [initialValue=false] - Initial selection (default: false/No).
+   * @returns {Promise<boolean>} True for Yes, False for No.
+   * @protected
+   */
+  protected async promptYesNo(
+    question: string,
+    initialValue = false,
+  ): Promise<boolean> {
+    return new Utils.Confirm({ title: question, initialValue }).run();
+  }
+
+  /**
+   * Prompts the user for a standard text input.
+   *
+   * @param {string} question - The text to display.
+   * @param {string} [placeholder] - Optional placeholder text.
+   * @param {string} [initialValue] - Optional initial value.
+   * @param {boolean} [password] - If true, mask the input.
+   * @returns {Promise<string>} The user's input.
+   * @protected
+   */
+  protected async promptText(
+    question: string,
+    placeholder?: string,
+    initialValue?: string,
+    password?: boolean,
+  ): Promise<string> {
+    return new Utils.TextPrompt({
+      title: question,
+      placeholder,
+      initialValue,
+      password,
+    }).run();
   }
 
   /**
@@ -178,9 +213,16 @@ export abstract class BaseCommand {
    */
   protected async promptMultiSelect(
     question: string,
-    options: string[]
+    options: string[],
   ): Promise<string[]> {
-    return Utils.promptMultiSelect(question, options);
+    // Mapping string[] -> MultiSelectOption[]
+    const multiSelect = new Utils.MultiSelect<string>().title(question);
+
+    options.forEach((opt) => {
+      multiSelect.add(opt, opt);
+    });
+
+    return multiSelect.run();
   }
 
   /**
@@ -195,8 +237,26 @@ export abstract class BaseCommand {
   protected async promptSelectV2(
     question: string,
     options: string[],
-    config?: { allowCustom?: boolean; columns?: number }
+    config?: { allowCustom?: boolean; columns?: number },
   ): Promise<string> {
-    return Utils.promptSelectV2(question, options, config);
+    const select = new Utils.Select<string>()
+      .title(question)
+      .columns(config?.columns || 1);
+
+    options.forEach((opt) => {
+      select.add(opt, opt);
+    });
+
+    if (config?.allowCustom) {
+      select.add("Other...", "Other...");
+    }
+
+    const result = await select.run();
+
+    if (config?.allowCustom && result === "Other...") {
+      return this.promptText(chalk.yellow("   👉 Enter value: "));
+    }
+
+    return result;
   }
 }
