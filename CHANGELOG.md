@@ -1,5 +1,12 @@
 # Changelog
 
+## [17.4.0-ai] - 2026-01-16
+- ✨ Refactored the npm publishing workflow in `.github/workflows/release.yml`.
+- 🛠️ Consolidated the build and publish steps for npm, improving clarity and reducing redundancy.
+- 🚀 Introduced a dedicated 'Build for NPM' step to prepare the package before publishing.
+- 📦 Now publishing to npm *before* building the full distribution, ensuring a clean publish.
+- 📝 Updated the timestamp in `src/commands/index.ts` to reflect the latest code generation time.
+
 ## [17.3.1-ai] - 2026-01-16
 - ✨ Updated build process to utilize `bun run build` for faster and more efficient builds.
 - 📝 Updated timestamp in `src/commands/index.ts` to reflect the latest build generation time.
