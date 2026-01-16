@@ -1,5 +1,12 @@
 # Changelog
 
+## [16.8.1-ai] - 2026-01-16
+- ✨ Improved the commit workflow by adding commas to prompts for better readability.
+- 🚀 Added functionality to update the README file with the new version number and command list after a release.
+- 🛠️ Enhanced error handling and messaging in various parts of the commit process.
+- 📝 Updated the generated timestamp in index.ts to reflect the latest changes.
+- ⚙️ Refactored code for better consistency and maintainability.
+
 ## [16.8.0-ai] - 2026-01-16
 - ✨ Added audio and visual feedback to the autobuild command for a better developer experience.
 - 📝 Updated the README.md file to include a version badge and automatically generated commands table.

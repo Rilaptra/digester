@@ -31,7 +31,7 @@ export class CommitCommand extends BaseCommand {
     if (!GitManager.isRepo(targetDir)) {
       this.warn("⚠️  This directory is not a Git repository.");
       const doInit = await this.promptYesNo(
-        `${chalk.bold("Initialize Git")} in this directory now?`
+        `${chalk.bold("Initialize Git")} in this directory now?`,
       );
 
       if (doInit) {
@@ -51,12 +51,12 @@ export class CommitCommand extends BaseCommand {
     if (!(await GitManager.hasRemote(targetDir))) {
       this.warn("⚠️  No remote repository configured.");
       const addRemote = await this.promptYesNo(
-        `${chalk.bold("Add a Remote Origin")} to push your code?`
+        `${chalk.bold("Add a Remote Origin")} to push your code?`,
       );
 
       if (addRemote) {
         const url = await this.promptText(
-          chalk.cyan("👉 Enter Remote URL (e.g., git@github.com:u/repo.git): ")
+          chalk.cyan("👉 Enter Remote URL (e.g., git@github.com:u/repo.git): "),
         );
         if (url && url.length > 5) {
           if (await GitManager.addRemote(targetDir, url)) {
@@ -75,15 +75,15 @@ export class CommitCommand extends BaseCommand {
       targetDir,
       ".github",
       "workflows",
-      "release.yml"
+      "release.yml",
     );
 
     // Cek dulu filenya ada apa nggak
     if (!(await Bun.file(releaseYmlPath).exists())) {
       const createWorkflow = await this.promptYesNo(
         `${chalk.bold(
-          "Create GitHub Release Workflow"
-        )} (.github/workflows/release.yml)?`
+          "Create GitHub Release Workflow",
+        )} (.github/workflows/release.yml)?`,
       );
 
       if (createWorkflow) {
@@ -94,7 +94,7 @@ export class CommitCommand extends BaseCommand {
             "Standard (Source Code Release Only)",
             "Binary Build (Cross-Platform Compile + Release)",
           ],
-          { columns: 1 }
+          { columns: 1 },
         );
 
         let template = "";
@@ -194,7 +194,7 @@ jobs:
           this.success(`✅ Created '${label}' release workflow.`);
         } catch (e) {
           this.warn(
-            `Failed to create release workflow: ${(e as Error).message}`
+            `Failed to create release workflow: ${(e as Error).message}`,
           );
         }
       }
@@ -224,30 +224,30 @@ jobs:
       generateLog({ type: "info", raw: true }, chalk.bold("\n📝 AI Proposal:"));
       generateLog(
         { type: "info", raw: true },
-        `   ${chalk.cyan("Message")} : ${result.commitMessage}`
+        `   ${chalk.cyan("Message")} : ${result.commitMessage}`,
       );
       generateLog(
         { type: "info", raw: true },
-        `   ${chalk.green("Bump")}    : ${result.bump.toUpperCase()}`
+        `   ${chalk.green("Bump")}    : ${result.bump.toUpperCase()}`,
       );
       generateLog(
         { type: "info", raw: true },
-        `   ${chalk.yellow("Log")}     : ${result.changelog}\n`
+        `   ${chalk.yellow("Log")}     : ${result.changelog}\n`,
       );
 
       // --- 🔥 NEW FEATURE: SECRET CHECK ---
       if (result.checkResult && !result.checkResult.isSafe) {
         generateLog(
           { type: "warn", raw: true },
-          chalk.bgRed.white.bold(" 🛡️  SECURITY WARNING ")
+          chalk.bgRed.white.bold(" 🛡️  SECURITY WARNING "),
         );
         generateLog(
           { type: "warn", raw: true },
-          `   ${chalk.red(result.checkResult.message)}\n`
+          `   ${chalk.red(result.checkResult.message)}\n`,
         );
 
         const proceed = await this.promptYesNo(
-          `${chalk.bold("SENSITIVE DATA DETECTED.")} Continue anyway?`
+          `${chalk.bold("SENSITIVE DATA DETECTED.")} Continue anyway?`,
         );
         if (!proceed) {
           this.error("Process aborted for security reasons.");
@@ -257,8 +257,8 @@ jobs:
 
       const confirm = await this.promptYesNo(
         `${chalk.bgBlue.black(" EXECUTE ")} Commit these changes? ${chalk.dim(
-          "(Y/n)"
-        )} `
+          "(Y/n)",
+        )} `,
       );
 
       if (!confirm) {
@@ -308,7 +308,7 @@ jobs:
       } else {
         newContent = `${header}${entry}${currentContent.replace(
           "# Changelog",
-          ""
+          "",
         )}`;
       }
 
@@ -318,6 +318,13 @@ jobs:
         cwd: targetDir,
       });
 
+      if (newVer && !isThis) {
+        // 1. Update Readme Version
+        await GitManager.updateReadmeVersion(newVer, targetDir);
+        // 2. Update Tabel Command (Selalu update tiap commit, in case ada command baru/deskripsi berubah)
+        await GitManager.updateReadmeCommands(targetDir);
+      }
+
       // --- 🔥 NEW FEATURE: PRE-PUSH SCRIPTS (Before Push Strategy) ---
       if (isThis) {
         const config = await ConfigManager.load(targetDir);
@@ -325,9 +332,8 @@ jobs:
 
         // If no scripts configured, ask user if they want to run any
         if (scriptsToRun.length === 0) {
-          const availableScripts = await ConfigManager.getAvailableScripts(
-            targetDir
-          );
+          const availableScripts =
+            await ConfigManager.getAvailableScripts(targetDir);
           const availableTS = await ConfigManager.listTSFiles(targetDir);
 
           if (availableScripts.length > 0 || availableTS.length > 0) {
@@ -338,9 +344,9 @@ jobs:
 
             const selected = await this.promptMultiSelect(
               chalk.cyan(
-                "\n🔍 Pre-push: Select scripts/TS files to run (optional):"
+                "\n🔍 Pre-push: Select scripts/TS files to run (optional):",
               ),
-              options
+              options,
             );
 
             if (selected.length > 0) {
@@ -361,7 +367,7 @@ jobs:
             let retry = true;
             while (retry) {
               const scriptSpinner = this.spinner(
-                `Running: ${chalk.bold(cleanItem)}...`
+                `Running: ${chalk.bold(cleanItem)}...`,
               );
 
               try {
@@ -381,13 +387,13 @@ jobs:
                   retry = false;
                 } else {
                   scriptSpinner.fail(
-                    `Failed: ${cleanItem}\n${chalk.red(stderr)}`
+                    `Failed: ${cleanItem}\n${chalk.red(stderr)}`,
                   );
 
                   const action = await this.promptSelectV2(
                     chalk.red(`Script '${cleanItem}' failed. What next?`),
                     ["Retry", "Continue anyway", "Abort"],
-                    { columns: 1 }
+                    { columns: 1 },
                   );
 
                   if (action === "Abort") {
@@ -400,7 +406,7 @@ jobs:
                 }
               } catch (error) {
                 scriptSpinner.fail(
-                  `Execution error: ${(error as Error).message}`
+                  `Execution error: ${(error as Error).message}`,
                 );
                 const exit = await this.promptYesNo("Abort process?");
                 if (exit) process.exit(1);
@@ -441,7 +447,7 @@ jobs:
       await GitManager.executeCommit(
         result.commitMessage,
         newVer || undefined,
-        targetDir
+        targetDir,
       );
 
       // --- 5. Push Strategy ---
@@ -452,7 +458,7 @@ jobs:
           "Create PR Branch (New Branch)",
           "Skip Push",
         ],
-        { columns: 1 }
+        { columns: 1 },
       );
 
       if (pushStrategy === "Skip Push") {
@@ -462,7 +468,7 @@ jobs:
 
       if (pushStrategy === "Create PR Branch (New Branch)") {
         const branchName = await this.promptText(
-          chalk.cyan("👉 Enter new branch name (e.g. feat/new-ui): ")
+          chalk.cyan("👉 Enter new branch name (e.g. feat/new-ui): "),
         );
 
         const cleanName = branchName.trim().replace(/\s+/g, "-");
@@ -471,7 +477,7 @@ jobs:
           const created = await GitManager.createBranch(targetDir, cleanName);
           if (!created) {
             spinnerBranch.fail(
-              "Failed to create branch. Pushing to current instead."
+              "Failed to create branch. Pushing to current instead.",
             );
             await GitManager.pushToRemote(targetDir);
           } else {
@@ -489,7 +495,7 @@ jobs:
 
       generateLog(
         { type: "success", raw: true },
-        chalk.bgGreen.black("\n 🎉 ALL SET! ")
+        chalk.bgGreen.black("\n 🎉 ALL SET! "),
       );
     } catch (e) {
       spinner.fail(chalk.red(`AI Error: ${(e as Error).message}`));

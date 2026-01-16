@@ -1,5 +1,7 @@
 # ⚡ Digester CLI
 
+![Version](https://img.shields.io/badge/Version-16.8.1--ai-blue?style=for-the-badge)
+
 > **The Ultimate Codebase Digester & AI Operations Agent.**  
 > Stop copy-pasting code fragments. Stop writing mechanical commit messages. Let AI handle your entire maintenance workflow.
 
