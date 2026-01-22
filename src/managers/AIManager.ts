@@ -2,9 +2,25 @@
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: AIManager is a static class> */
 import type { AICommitResponse, AuthConfig } from "../types/index.js";
 
+/**
+ * Manages interactions with AI services (Google Generative AI).
+ * Handles fetching available models and generating commit details from diffs.
+ */
 export class AIManager {
+  /**
+   * Base URL for Google Generative AI API version 1beta.
+   * @private
+   */
   private static baseUrl = "https://generativelanguage.googleapis.com/v1beta";
 
+  /**
+   * Fetches the list of available AI models from the API.
+   * Filters specifically for Gemini and Gemma models that support content generation.
+   *
+   * @param key - The API key for authentication.
+   * @returns A promise that resolves to a sorted array of model names.
+   * @throws Error if the fetch fails or the API returns an error.
+   */
   static async fetchModels(key: string): Promise<string[]> {
     try {
       const res = await fetch(`${AIManager.baseUrl}/models?key=${key}`);
@@ -18,14 +34,11 @@ export class AIManager {
       return (data.models || [])
         .filter(
           (m: { name: string; supportedGenerationMethods: string[] }) =>
-            // Cek apakah nama model mengandung 'gemini' ATAU 'gemma'
             (m.name.includes("gemini") || m.name.includes("gemma")) &&
             m.supportedGenerationMethods?.includes("generateContent"),
         )
         .map((m: { name: string }) => m.name.replace("models/", ""))
         .sort((a: string, b: string) => {
-          // Sort: Prefer Gemini over Gemma logic, or just alphanumeric descending
-          // Kita tetep descending biar versi terbaru (misal 1.5) ada di atas
           return b.localeCompare(a);
         });
     } catch (e) {
@@ -33,6 +46,14 @@ export class AIManager {
     }
   }
 
+  /**
+   * Generates commit message, changelog, and provides a security check for a given Git diff using AI.
+   *
+   * @param diff - The Git diff string to analyze.
+   * @param auth - The authentication configuration containing the API key and desired model.
+   * @returns A promise that resolves to an AICommitResponse object containing the generated details.
+   * @throws Error if the API key is missing, the AI response is empty, or the request fails.
+   */
   static async generateCommitDetails(
     diff: string,
     auth: AuthConfig,
@@ -41,7 +62,6 @@ export class AIManager {
       throw new Error("API Key missing. Run 'digest set-key <KEY>' first.");
     const model = auth.model || "gemini-1.5-flash";
 
-    // 🔥 UPDATE PROMPT: Strict emoji enforcement and conventional style
     const prompt = `
         You are a Senior DevOps Engineer. Analyze the following 'git diff'. 
         You MUST return a valid JSON object ONLY. Do not wrap it in markdown code blocks.
@@ -109,7 +129,7 @@ export class AIManager {
           };
         }[];
         error?: { message: string };
-      }; // Cast any biar cepet, logic error handle sama
+      };
       if (data.error)
         throw new Error(`${data.error.message} (Model: ${model})`);
 

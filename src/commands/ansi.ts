@@ -39,6 +39,8 @@ export class AnsiCommand extends BaseCommand {
         outputFile = arg.split("=")[1];
       } else if (arg.startsWith("--file=")) {
         inputFilePath = arg.split("=")[1];
+      } else if (arg.startsWith("--text=")) {
+        text = arg.split("=")[1];
       } else if (arg === "--from" && args[i + 1]) {
         fromColor = args[++i];
       } else if (arg === "--to" && args[i + 1]) {
@@ -161,10 +163,9 @@ export class AnsiCommand extends BaseCommand {
         continue;
       }
 
-      const chars = [...line];
       let lineResult = "";
-
-      chars.forEach((char, x) => {
+      let x = 0;
+      for (const char of line) {
         // Calculate Ratio (horizontal gradient)
         // We can also support vertical if we use line index, but horizontal is standard for text art usually.
         const t = maxWidth > 1 ? x / (maxWidth - 1) : 0;
@@ -181,7 +182,8 @@ export class AnsiCommand extends BaseCommand {
 
         // Append
         lineResult += `${ansi}${char}`;
-      });
+        x++;
+      }
 
       outputBuffer.push(lineResult);
     }

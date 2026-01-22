@@ -6,7 +6,18 @@ import { DEFAULT_CONFIG, SYSTEM } from "../constants/defaults.js";
 import type { AppConfig, AuthConfig } from "../types/index.js";
 import { generateLog } from "../utils/logger.js";
 
+/**
+ * Manages application and authentication configuration.
+ * Handles loading configuration from files and environment.
+ */
 export class ConfigManager {
+  /**
+   * Loads application configuration from the target directory.
+   * Merges defaults with prompter.config.json and .gitignore.
+   *
+   * @param targetDir - The root directory of the project to load config for.
+   * @returns A promise that resolves to the combined application configuration.
+   */
   static async load(targetDir: string): Promise<AppConfig> {
     const final: AppConfig = {
       ignoredPatterns: new Set(DEFAULT_CONFIG.ignoredPatterns),
@@ -68,6 +79,11 @@ export class ConfigManager {
   }
 
   // --- AUTH CONFIG (Global) ---
+  /**
+   * Retrieves the global authentication configuration.
+   *
+   * @returns A promise that resolves to the authentication configuration.
+   */
   static async getAuth(): Promise<AuthConfig> {
     const file = Bun.file(SYSTEM.AUTH_FILE);
     if (await file.exists()) {
@@ -80,12 +96,23 @@ export class ConfigManager {
     return {};
   }
 
+  /**
+   * Saves or updates the global authentication configuration.
+   *
+   * @param cfg - The partial authentication configuration to save.
+   */
   static async saveAuth(cfg: AuthConfig) {
     const current = await ConfigManager.getAuth();
     const final = { ...current, ...cfg };
     await Bun.write(SYSTEM.AUTH_FILE, JSON.stringify(final, null, 2));
   }
 
+  /**
+   * Retrieves available scripts from package.json in the target directory.
+   *
+   * @param targetDir - The directory containing package.json.
+   * @returns A promise that resolves to an array of script names.
+   */
   static async getAvailableScripts(targetDir: string): Promise<string[]> {
     const pkgPath = join(targetDir, "package.json");
     if (await Bun.file(pkgPath).exists()) {
@@ -99,6 +126,12 @@ export class ConfigManager {
     return [];
   }
 
+  /**
+   * Lists TypeScript files in predefined directories of the target project.
+   *
+   * @param targetDir - The root directory to scan.
+   * @returns A promise that resolves to an array of relative paths to .ts files.
+   */
   static async listTSFiles(targetDir: string): Promise<string[]> {
     const results: string[] = [];
     const dirsToScan = [".", "scripts", "tools", "bin"];
@@ -106,9 +139,6 @@ export class ConfigManager {
     for (const d of dirsToScan) {
       const dirPath = join(targetDir, d);
       try {
-        // Bun.file on a directory doesn't give us listing easily.
-        // We might need to use node:fs or Bun.spawn to find files if we want to stay "Bun native" but efficient.
-        // Let's use a simple approach with node:fs for now as it's robust.
         const { readdirSync, statSync } = await import("node:fs");
         if (existsSync(dirPath) && statSync(dirPath).isDirectory()) {
           const files = readdirSync(dirPath);

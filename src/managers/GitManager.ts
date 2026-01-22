@@ -1,13 +1,24 @@
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: GitManager is a static class> */
 
-import { existsSync } from "node:fs"; // Keep sync check for init/existence logic or switch to async
+import { existsSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import chalk from "chalk";
 import { SYSTEM } from "../constants/defaults.js";
 import { generateLog } from "../utils/logger.js";
 
+/**
+ * Manages Git operations and repository interactions.
+ * Handles diff generation, versioning, commits, remote management, and README updates.
+ */
 export class GitManager {
+  /**
+   * Prepares the repository and retrieves a clean Git diff.
+   * Automatically initializes Git if not found and stages all changes.
+   *
+   * @param targetDir - The root directory of the Git repository. Defaults to SYSTEM.ROOT_DIR.
+   * @returns A promise that resolves to a filtered, optimized diff string.
+   */
   static async prepareAndGetDiff(
     targetDir: string = SYSTEM.ROOT_DIR,
   ): Promise<string> {
@@ -27,22 +38,16 @@ export class GitManager {
       // Add changes to staging
       Bun.spawnSync(["git", "add", "."], { cwd: targetDir });
 
-      // 🔥 OPTIMIZATION START HERE
-      // Pake -U0 biar context lines-nya 0 (hemat token parah)
       const proc = Bun.spawn(["git", "diff", "--cached", "-U0"], {
         cwd: targetDir,
       });
 
       const rawDiff = await new Response(proc.stdout).text();
 
-      // Filter: Cuma ambil Header File, Tambahan (+), dan Hapus (-)
-      // Kita buang metadata git kayak "index abc..def" atau "@@ -1,0 ..."
       const cleanDiff = rawDiff
         .split("\n")
         .filter((line) => {
-          // Keep file headers biar AI tau ini file apa
           if (line.startsWith("diff --git")) return true;
-          // Keep additions & deletions
           if (line.startsWith("+") && !line.startsWith("+++")) return true;
           if (line.startsWith("-") && !line.startsWith("---")) return true;
           return false;
@@ -50,12 +55,19 @@ export class GitManager {
         .join("\n");
 
       return cleanDiff;
-      // 🔥 OPTIMIZATION END
     } catch {
       return "";
     }
   }
 
+  /**
+   * Updates the version in package.json and stages the change.
+   * Supports major, minor, and patch bumps.
+   *
+   * @param bumpType - The type of version bump ('major', 'minor', 'patch', or 'none').
+   * @param targetDir - The root directory containing package.json. Defaults to SYSTEM.ROOT_DIR.
+   * @returns A promise that resolves to the new version string or null if failed.
+   */
   static async updateVersion(
     bumpType: string,
     targetDir: string = SYSTEM.ROOT_DIR,
@@ -102,6 +114,14 @@ export class GitManager {
     }
   }
 
+  /**
+   * Executes a Git commit with an optional tag.
+   *
+   * @param msg - The commit message.
+   * @param tag - Optional version tag (e.g., '1.0.0').
+   * @param targetDir - The root directory of the Git repository. Defaults to SYSTEM.ROOT_DIR.
+   * @throws Error if the Git commit process fails.
+   */
   static async executeCommit(
     msg: string,
     tag?: string,
@@ -130,10 +150,22 @@ export class GitManager {
 
   // --- 🛠️ CORE CHECKS & INIT ---
 
+  /**
+   * Checks if a directory is a Git repository.
+   *
+   * @param dir - The directory to check.
+   * @returns True if a .git directory exists.
+   */
   static isRepo(dir: string): boolean {
     return existsSync(join(dir, ".git"));
   }
 
+  /**
+   * Initializes a new Git repository in the specified directory.
+   *
+   * @param dir - The directory to initialize.
+   * @returns A promise that resolves to true if successful.
+   */
   static async init(dir: string): Promise<boolean> {
     try {
       Bun.spawnSync(["git", "init"], { cwd: dir });
@@ -143,6 +175,12 @@ export class GitManager {
     }
   }
 
+  /**
+   * Checks if the Git repository has any remotes configured.
+   *
+   * @param dir - The directory of the Git repository.
+   * @returns A promise that resolves to true if at least one remote exists.
+   */
   static async hasRemote(dir: string): Promise<boolean> {
     try {
       const proc = Bun.spawn(["git", "remote"], { cwd: dir });
@@ -153,6 +191,13 @@ export class GitManager {
     }
   }
 
+  /**
+   * Adds a remote origin to the Git repository.
+   *
+   * @param dir - The directory of the Git repository.
+   * @param url - The remote repository URL.
+   * @returns A promise that resolves to true if successfully added and verified.
+   */
   static async addRemote(dir: string, url: string): Promise<boolean> {
     try {
       Bun.spawnSync(["git", "remote", "add", "origin", url], { cwd: dir });
@@ -163,6 +208,12 @@ export class GitManager {
     }
   }
 
+  /**
+   * Retrieves the current Git branch name.
+   *
+   * @param dir - The directory of the Git repository.
+   * @returns A promise that resolves to the current branch name, defaults to 'main'.
+   */
   static async getCurrentBranch(dir: string): Promise<string> {
     try {
       const proc = Bun.spawn(["git", "branch", "--show-current"], { cwd: dir });
@@ -172,6 +223,13 @@ export class GitManager {
     }
   }
 
+  /**
+   * Creates and switches to a new Git branch.
+   *
+   * @param dir - The directory of the Git repository.
+   * @param branchName - The name of the new branch.
+   * @returns A promise that resolves to true if successful.
+   */
   static async createBranch(dir: string, branchName: string): Promise<boolean> {
     try {
       // checkout -b
@@ -186,6 +244,12 @@ export class GitManager {
   }
 
   // --- 🔥 AUTO PUSH FUNCTION ---
+  /**
+   * Pushes the current branch and tags to the remote origin.
+   *
+   * @param targetDir - The root directory of the Git repository. Defaults to SYSTEM.ROOT_DIR.
+   * @param branchName - Optional branch name to push. Defaults to the current branch.
+   */
   static async pushToRemote(
     targetDir: string = SYSTEM.ROOT_DIR,
     branchName?: string,
@@ -223,9 +287,12 @@ export class GitManager {
   }
 
   /**
-   * Update README.md version badge.
-   * Finds format: ![Version](https://img.shields.io/badge/Version-X.Y.Z--ai-blue?style=for-the-badge)
-   * and replaces X.Y.Z with newVer.
+   * Updates the version badge in README.md.
+   * Searches for a shields.io version badge and replaces it with the new version.
+   * If the badge is not found, it attempts to inject it after the H1 header.
+   *
+   * @param newVer - The new version string to display in the badge.
+   * @param targetDir - The root directory containing README.md. Defaults to SYSTEM.ROOT_DIR.
    */
   static async updateReadmeVersion(
     newVer: string,
@@ -239,11 +306,6 @@ export class GitManager {
     try {
       let content = await readmeFile.text();
 
-      // Regex untuk nyari badge version.
-      // Kita cari pattern shields.io standard.
-      // E.g., ![Version](https://img.shields.io/badge/Version-16.7.0--ai-blue?style=for-the-badge)
-      // Note: Shields.io pake double dash (--) buat escape dash (-).
-
       const safeVer = newVer.replace(/-/g, "--"); // Escape dash for URL
       const regex =
         /(!\[.*Version.*\]\(https:\/\/img\.shields\.io\/badge\/Version-)(.+?)(-blue)/;
@@ -252,16 +314,12 @@ export class GitManager {
         // Replace existing badge
         content = content.replace(regex, `$1${safeVer}$3`);
       } else {
-        // Kalau badge belum ada, kita inject di bawah Title H1
         const badge = `![Version](https://img.shields.io/badge/Version-${safeVer}-blue?style=for-the-badge)`;
 
-        // Cari posisi setelah header # Digester CLI
-        // Kita inject di baris baru setelah header line
         const headerRegex = /^(# .+$)/m;
         if (headerRegex.test(content)) {
           content = content.replace(headerRegex, `$1\n\n${badge}`);
         } else {
-          // Fallback prepend
           content = `${badge}\n\n${content}`;
         }
       }
@@ -283,8 +341,10 @@ export class GitManager {
   }
 
   /**
-   * 🔥 AUTOMATIC README COMMANDS TABLE GENERATOR 🔥
-   * Scans src/commands/*.ts, extracts metadata via Regex, and updates README.md table.
+   * Automatically updates the commands reference table in README.md.
+   * Scans the commands directory, extracts metadata from command files, and generates a markdown table.
+   *
+   * @param targetDir - The root directory of the project. Defaults to SYSTEM.ROOT_DIR.
    */
   static async updateReadmeCommands(targetDir: string = SYSTEM.ROOT_DIR) {
     const commandsDir = join(targetDir, "src", "commands");
@@ -332,7 +392,7 @@ export class GitManager {
               .split(",")
               .map((a) => a.trim().replace(/["']/g, ""))
               .filter((a) => a.length > 0)
-              .map((a) => `\`${a}\``) // Kasih backtick biar gaya
+              .map((a) => `\`${a}\``)
               .join(", ");
           }
 
@@ -352,14 +412,10 @@ export class GitManager {
       // 3. Inject to README
       let readmeContent = await readmeFile.text();
 
-      // Regex buat nyari section Commands Reference
-      // Kita cari header "## 🎮 Commands Reference" sampai ketemu header berikutnya atau separator
-      // Pake [\s\S]*? buat match multiline non-greedy
       const sectionRegex =
         /(## 🎮 Commands Reference\n\n)([\s\S]*?)(\n\n##|\n\n---|$)/;
 
       if (sectionRegex.test(readmeContent)) {
-        // Replace konten tabel yang lama dengan yang baru
         readmeContent = readmeContent.replace(sectionRegex, `$1${newTable}$3`);
 
         await Bun.write(readmePath, readmeContent);

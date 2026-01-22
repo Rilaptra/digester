@@ -1,5 +1,16 @@
 # Changelog
 
+## [17.5.0-ai] - 2026-01-22
+- ✨ Enhanced system health checks with background audits and notifications.
+- 🚀 Implemented automatic dependency update checks for Digester CLI, Bun runtime, and project dependencies.
+- 🛠️ Refactored ConfigManager, GitManager, and SystemManager for improved modularity and maintainability.
+- ⚡ Optimized Git diff generation for AI analysis by reducing context lines.
+- 📝 Added detailed logging and error handling throughout the system.
+- 📦 Updated dependencies and configurations for enhanced performance and security.
+- ⚙️ Introduced a persistence layer for caching system metadata to reduce API calls.
+- 📖 Improved documentation and comments for better code understanding.
+
+
 ## [17.4.2-ai] - 2026-01-16
 - ✨ Corrected the location where the npm token is saved in the release workflow. The token is now saved to `.npmrc` in the root of the project instead of the user's home directory, ensuring it's included in the release artifacts.
 - 📝 Updated the timestamp in `src/commands/index.ts` to reflect the latest code generation time. This is a minor update to keep the generated file metadata current.
@@ -29,7 +40,7 @@
 - 📝 Updated the timestamp in `src/commands/index.ts` to reflect the latest code generation time.
 
 ## [17.2.1-ai] - 2026-01-16
-- ✨ Updated the author name in README.md from 'Rizqi Lasheva (Rilaptra)' to '(Rilaptra)'.
+- ✨ Updated the author name in README.md from to '(Rilaptra)'.
 - 📦 Renamed the npm package from `@erzy/digester` to `@rilaptra/digester` in `package.json` to reflect the author's preferred handle.
 - ⚙️ Updated the generated timestamp in `src/commands/index.ts` to reflect the latest code generation time.
 

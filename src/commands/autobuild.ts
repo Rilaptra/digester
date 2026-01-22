@@ -39,6 +39,7 @@ export class AutoBuildCommand extends BaseCommand {
           filename.includes(".git") ||
           filename.includes("dist") ||
           filename.includes("generated") ||
+          filename.includes("src\\commands\\index.ts") ||
           filename.includes("bin")
         ) {
           return;
