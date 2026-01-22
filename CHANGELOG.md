@@ -1,5 +1,9 @@
 # Changelog
 
+## [17.5.1-ai] - 2026-01-22
+- ✨ Updated generated timestamp in `README.md` and `src/commands/index.ts`.
+- ⚙️ This change reflects a recent build process update where the timestamp generation logic was adjusted, resulting in a slightly newer timestamp.
+
 ## [17.5.0-ai] - 2026-01-22
 - ✨ Enhanced system health checks with background audits and notifications.
 - 🚀 Implemented automatic dependency update checks for Digester CLI, Bun runtime, and project dependencies.
