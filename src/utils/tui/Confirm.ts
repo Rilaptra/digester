@@ -72,7 +72,7 @@ export class Confirm {
 
       const handleKey = (
         _: unknown,
-        key: { name: string; ctrl: boolean; sequence: string }
+        key: { name: string; ctrl: boolean; sequence: string },
       ) => {
         if (key.ctrl && key.name === "c") {
           cleanup();
@@ -109,8 +109,8 @@ export class Confirm {
             const finalRes = this.value ? chalk.green("Yes") : chalk.red("No");
             stdout.write(
               `${chalk.cyan("? ")} ${chalk.bold(
-                this.config.title
-              )} ${finalRes}\n`
+                this.config.title,
+              )} ${finalRes}\n`,
             );
 
             resolve(this.value);

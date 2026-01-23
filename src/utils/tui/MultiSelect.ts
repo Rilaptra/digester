@@ -252,8 +252,7 @@ export class MultiSelect<ValueType = string> {
             // Description (Cuma kalau 1 kolom, kalau grid jadi berantakan)
             if (columns === 1 && opt.description && !opt.disabled) {
               // Hapus padding yg tadi, ganti logic
-              lineOutput =
-                lineOutput.trimEnd() + " " + chalk.dim(`- ${opt.description}`);
+              lineOutput = `${lineOutput.trimEnd()} ${chalk.dim(`- ${opt.description}`)}`;
             }
           } else {
             // 🔥 FIX: EMPTY SLOT PADDING
@@ -282,7 +281,7 @@ export class MultiSelect<ValueType = string> {
 
       // 6. Footer
       if (errorMessage) {
-        stdout.write(chalk.red(` ⚠ ${errorMessage}`) + "\x1B[K\n");
+        stdout.write(`${chalk.red(` ⚠ ${errorMessage}`)}\x1B[K\n`);
       } else {
         stdout.write(
           chalk.dim(" (Press <space> to select, <enter> to complete)") +

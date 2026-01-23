@@ -1,6 +1,5 @@
 /** biome-ignore-all lint/suspicious/noControlCharactersInRegex: <explanation: Biome> */
-import { dirname, join, relative, resolve, parse } from "node:path"; // Tambahin 'parse' & 'dirname' & 'resolve'
-import { basename } from "node:path"; // Import basename explicit
+import { basename, dirname, join, parse, relative, resolve } from "node:path"; // Import basename explicit
 import chalk from "chalk";
 import Table from "cli-table3";
 import { SYSTEM } from "../constants/defaults.js";
@@ -8,8 +7,8 @@ import { BaseCommand } from "../core/BaseCommand.js";
 import { DependencyTracer } from "../core/DependencyTracer.js";
 import { ConfigManager } from "../managers/ConfigManager.js";
 import type { ScanStats } from "../types/index.js";
-import * as Utils from "../utils/index.js";
 import { promptFileExplorer } from "../utils/explorer.js";
+import * as Utils from "../utils/index.js";
 import { generateLog } from "../utils/logger.js";
 
 export class TraceCommand extends BaseCommand {
@@ -27,7 +26,7 @@ export class TraceCommand extends BaseCommand {
     if (!entryFile) {
       this.info("Select the entry point file (e.g., src/index.ts):");
       const selected = await promptFileExplorer(cwd, cwd); // Start browsing from CWD
-      
+
       if (!selected) {
         this.warn("Operation cancelled.");
         return;
@@ -45,22 +44,26 @@ export class TraceCommand extends BaseCommand {
     // 🔥 FIX: DETECT REAL PROJECT ROOT
     // Jangan pake CWD digester, tapi cari root dari file target
     const targetRoot = await this.findProjectRoot(entryFile);
-    
+
     // Relative path buat display
     const relEntry = relative(targetRoot, entryFile);
-    
+
     this.success(`Context Root: ${chalk.dim(targetRoot)}`);
     this.success(`Target File: ${chalk.bold(relEntry)}`);
 
     // 2. Trace Dependencies
     const spinner = this.spinner("Tracing imports recursively...");
     const filesToDigest = new Set<string>();
-    
+
     try {
       // Pass 'targetRoot' supaya security check di Tracer valid untuk project seberang
       const tracedFiles = await DependencyTracer.trace(entryFile, targetRoot);
-      tracedFiles.forEach(f => {filesToDigest.add(f)});
-      spinner.succeed(`Trace complete! Found ${filesToDigest.size} related files.`);
+      tracedFiles.forEach((f) => {
+        filesToDigest.add(f);
+      });
+      spinner.succeed(
+        `Trace complete! Found ${filesToDigest.size} related files.`,
+      );
     } catch (e) {
       spinner.fail(`Trace failed: ${(e as Error).message}`);
       return;
@@ -85,17 +88,24 @@ export class TraceCommand extends BaseCommand {
       }
       current = dirname(current);
     }
-    
+
     // Fallback: Kalau gak nemu package.json, pake folder tempat file itu berada
     return dirname(resolve(filePath));
   }
 
   // --- Regex Cleaner ---
   private stripAnsi(str: string): string {
-    return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, "");
+    return str.replace(
+      /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
+      "",
+    );
   }
 
-  private async processFiles(filePaths: Set<string>, root: string, entryLabel: string) {
+  private async processFiles(
+    filePaths: Set<string>,
+    root: string,
+    entryLabel: string,
+  ) {
     const config = await ConfigManager.load(root);
     const stats: ScanStats = {
       files: [],
@@ -115,7 +125,7 @@ export class TraceCommand extends BaseCommand {
     for (const fullPath of sortedPaths) {
       const relPath = relative(root, fullPath); // Path relative terhadap targetRoot
       const filename = fullPath.split("/").pop() || "";
-      
+
       if (config.ignoredPatterns.has(filename)) continue;
 
       try {
@@ -128,8 +138,10 @@ export class TraceCommand extends BaseCommand {
           continue;
         }
 
-        const ext = filename.includes(".") ? `.${filename.split(".").pop()}` : "";
-        
+        const ext = filename.includes(".")
+          ? `.${filename.split(".").pop()}`
+          : "";
+
         stats.files.push({
           path: fullPath,
           relPath: relPath,
@@ -138,7 +150,7 @@ export class TraceCommand extends BaseCommand {
         });
 
         stats.totalSize += s.size;
-        
+
         if (!stats.extStats[ext]) stats.extStats[ext] = { count: 0, size: 0 };
         stats.extStats[ext].count++;
         stats.extStats[ext].size += s.size;
@@ -146,7 +158,6 @@ export class TraceCommand extends BaseCommand {
         const isEntry = fullPath.endsWith(entryLabel) || relPath === entryLabel;
         const icon = isEntry ? "🎯" : "🔗";
         stats.tree.push(`${icon} ${chalk.green(relPath)}`);
-
       } catch {}
     }
 
@@ -166,7 +177,7 @@ export class TraceCommand extends BaseCommand {
     table.push(
       [chalk.cyan("Traced Files"), stats.files.length],
       [chalk.yellow("Context Size"), Utils.formatSize(stats.totalSize)],
-      [chalk.magenta("Est. Tokens"), Utils.estimateTokens(stats.totalSize)]
+      [chalk.magenta("Est. Tokens"), Utils.estimateTokens(stats.totalSize)],
     );
     generateLog({ type: "info", raw: true }, table.toString());
   }
@@ -184,15 +195,15 @@ export class TraceCommand extends BaseCommand {
     }
 
     // Clean ANSI codes from tree before writing
-    const cleanTree = stats.tree.map(line => this.stripAnsi(line)).join("\n");
+    const cleanTree = stats.tree.map((line) => this.stripAnsi(line)).join("\n");
 
     const writer = Bun.file(outPath).writer();
 
     writer.write(
       `# Dependency Trace: ${entryLabel}\n\n` +
-      `> **Method:** Recursive Import Trace\n` +
-      `> **Entry Point:** \`${entryLabel}\`\n\n` +
-      `## Graph Structure\n\`\`\`\n${cleanTree}\n\`\`\`\n\n`
+        `> **Method:** Recursive Import Trace\n` +
+        `> **Entry Point:** \`${entryLabel}\`\n\n` +
+        `## Graph Structure\n\`\`\`\n${cleanTree}\n\`\`\`\n\n`,
     );
 
     const writeSpin = this.spinner("Writing digest...");
@@ -200,14 +211,16 @@ export class TraceCommand extends BaseCommand {
     for (const f of stats.files) {
       try {
         const text = await Bun.file(f.path).text();
-        writer.write(`\n// --- ${f.relPath} ---\n\`\`\`${f.ext}\n${text}\n\`\`\`\n`);
+        writer.write(
+          `\n// --- ${f.relPath} ---\n\`\`\`${f.ext}\n${text}\n\`\`\`\n`,
+        );
       } catch {}
     }
 
     writer.end();
     // Gunakan import 'basename' langsung, bukan via Utils
     writeSpin.succeed(chalk.green(`Saved: generated/${basename(outPath)}`));
-    
+
     Utils.openFile(SYSTEM.OUT_DIR);
   }
 }

@@ -12,7 +12,7 @@ export class SetKeyCommand extends BaseCommand {
     let key = args[0];
     if (!key) {
       key = await this.promptText(
-        chalk.cyan("🔑 Enter Google Gemini API Key: ")
+        chalk.cyan("🔑 Enter Google Gemini API Key: "),
       );
     }
 

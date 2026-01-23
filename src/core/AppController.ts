@@ -1,9 +1,9 @@
 // src/core/AppController.ts
 import chalk from "chalk";
 import * as Commands from "../commands/index.js";
+import { SystemManager } from "../managers/SystemManager.js"; // 👈 New Location
 import { generateLog } from "../utils/logger.js";
 import { CommandLoader } from "./CommandLoader.js";
-import { SystemManager } from "../managers/SystemManager.js"; // 👈 New Location
 
 export class AppController {
   private loader: CommandLoader;
@@ -22,13 +22,16 @@ export class AppController {
 
     const args = Bun.argv.slice(2);
     const commandName = args[0] || ".";
-    
+
     let command = this.loader.getCommand(commandName);
     let commandArgs = args.slice(1);
 
     if (!command) {
       if (commandName.startsWith("-")) {
-        generateLog({ type: "error" }, chalk.red(`Unknown option: ${commandName}`));
+        generateLog(
+          { type: "error" },
+          chalk.red(`Unknown option: ${commandName}`),
+        );
         process.exit(1);
       }
       // Fallback to scan
@@ -50,7 +53,10 @@ export class AppController {
         await SystemManager.notify();
       }
     } else {
-      generateLog({ type: "error" }, chalk.red("Critical Error: Command not found."));
+      generateLog(
+        { type: "error" },
+        chalk.red("Critical Error: Command not found."),
+      );
       process.exit(1);
     }
   }

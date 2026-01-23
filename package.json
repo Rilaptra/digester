@@ -1,6 +1,6 @@
 {
   "name": "@rilaptra/digester",
-  "version": "17.6.0-ai",
+  "version": "17.7.0-ai",
   "description": "High-performance codebase context generator and AI operations toolkit optimized for Bun.",
   "module": "dist/index.js",
   "main": "dist/index.js",

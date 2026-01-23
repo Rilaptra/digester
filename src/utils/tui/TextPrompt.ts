@@ -85,7 +85,7 @@ export class TextPrompt {
 
       // 4. Render Error if exists (di baris bawah)
       if (this.errorMsg) {
-        stdout.write(`\n${chalk.red("✖ " + this.errorMsg)}`);
+        stdout.write(`\n${chalk.red(`✖ ${this.errorMsg}`)}`);
         stdout.write("\x1B[A"); // Balik ke baris input
       }
 
@@ -114,7 +114,7 @@ export class TextPrompt {
 
       const handleKey = async (
         _: unknown,
-        key: { name: string; ctrl: boolean; sequence: string }
+        key: { name: string; ctrl: boolean; sequence: string },
       ) => {
         if (isSubmitting) return; // Prevent double submit
 
@@ -161,8 +161,8 @@ export class TextPrompt {
 
             stdout.write(
               `${chalk.cyan("? ")} ${chalk.bold(
-                this.config.title
-              )} ${chalk.green(finalShow)}\n`
+                this.config.title,
+              )} ${chalk.green(finalShow)}\n`,
             );
             resolve(this.value);
             break;

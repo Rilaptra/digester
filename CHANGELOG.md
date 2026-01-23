@@ -1,5 +1,13 @@
 # Changelog
 
+## [17.7.0-ai] - 2026-01-23
+- ✨ Updated Biome configuration to include more files for formatting and linting.
+- 📝 Improved the trace command output for better readability and clarity.
+- 🛠️ Fixed minor inconsistencies in code formatting and imports across various files.
+- 🐛 Corrected a potential issue in the trace command where ANSI escape codes were not being stripped correctly.
+- 🎨 Enhanced the user experience in the set-key command with clearer prompts.
+- ⚡️ Optimized the dependency tracer to handle file paths more efficiently.
+
 ## [17.6.0-ai] - 2026-01-23
 - ✨ Implement a TreeSelect component for interactive file exploration.
 - 🚀 Added a new test case (TEST 10) to demonstrate the TreeSelect functionality.

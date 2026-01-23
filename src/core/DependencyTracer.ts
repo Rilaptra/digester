@@ -84,7 +84,7 @@ export class DependencyTracer {
     }
     return paths;
   }
-  
+
   /**
    * Tries to find the actual file on disk.
    * Handles:
