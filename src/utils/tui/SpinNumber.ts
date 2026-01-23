@@ -75,37 +75,42 @@ export class SpinNumber {
       const title = chalk.bold(this.config.title);
 
       // --- VISUAL LOGIC ---
-      let valueDisplay = "";
       const unitStr = this.config.unit ? chalk.dim(` ${this.config.unit}`) : "";
 
+      // 1. Value Display
+      let valueDisplay = "";
       if (this.isEditing) {
-        // Mode Typing: Warna Kuning/Cyan + Cursor visual underscore
-        valueDisplay = chalk.yellow(`${this.buffer}_`);
+        // Dim the current value, focus on input
+        valueDisplay = chalk.dim(`${this.value}`);
       } else {
-        // Mode View/Spin: Warna Hijau Bold
         valueDisplay = chalk.green.bold(`${this.value}`);
       }
 
-      // Arrow indicators (Dimmed kalau lagi mode typing)
+      // 2. Arrow Indicators
       const canDec =
         this.config.min === undefined || this.value > this.config.min;
       const canInc =
         this.config.max === undefined || this.value < this.config.max;
 
-      let leftArr = canDec ? "❮" : "";
-      let rightArr = canInc ? "❯" : "";
+      let leftArr = "";
+      let rightArr = "";
 
       if (this.isEditing) {
-        // Hide arrows saat typing biar fokus
-        leftArr = chalk.dim(" ");
-        rightArr = chalk.dim(" ");
+        // Dim arrows while editing
+        leftArr = canDec ? chalk.cyan.dim("❮") : chalk.gray.dim("❮");
+        rightArr = canInc ? chalk.cyan.dim("❯") : chalk.gray.dim("❯");
       } else {
         leftArr = canDec ? chalk.cyan("❮") : chalk.gray("❮");
         rightArr = canInc ? chalk.cyan("❯") : chalk.gray("❯");
       }
 
+      // 3. Sidecar Input
+      const inputDisplay = this.isEditing
+        ? chalk.yellow(`  ${this.buffer}`)
+        : "";
+
       stdout.write(
-        `${qMark}${title}  ${leftArr} ${valueDisplay}${unitStr} ${rightArr}`,
+        `${qMark}${title}  ${leftArr} ${valueDisplay}${unitStr} ${rightArr}${inputDisplay}`,
       );
     };
 

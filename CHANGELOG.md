@@ -1,5 +1,14 @@
 # Changelog
 
+## [17.6.0-ai] - 2026-01-23
+- ✨ Implement a TreeSelect component for interactive file exploration.
+- 🚀 Added a new test case (TEST 10) to demonstrate the TreeSelect functionality.
+- 🛠️ Refactored the file explorer logic to utilize the new TreeSelect component.
+- ⚙️ Improved the editor component with resize handling and history features.
+- 📝 Updated the utils/index.ts to export the TreeSelect component.
+- ⚡️ Added support for navigating the file system using arrow keys and Vim-style keybindings (HJKL).
+- 🧹 Removed the old file explorer code from explorer.ts.
+
 ## [17.5.1-ai] - 2026-01-22
 - ✨ Updated generated timestamp in `README.md` and `src/commands/index.ts`.
 - ⚙️ This change reflects a recent build process update where the timestamp generation logic was adjusted, resulting in a slightly newer timestamp.

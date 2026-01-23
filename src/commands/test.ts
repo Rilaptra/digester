@@ -9,6 +9,7 @@ import {
   Confirm,
   MultiSelect,
   TextPrompt,
+  TreeSelect,
 } from "../utils/index.js";
 import { Editor } from "../utils/tui/Editor.js";
 import { Select } from "../utils/tui/Select.js";
@@ -323,6 +324,26 @@ export class TestCommand extends BaseCommand {
     }).run();
 
     this.createBox(bio, "COMMIT MESSAGE BODY");
+
+    // --- TEST 10: TREE SELECT (Vim Style File Explorer) ---
+    this.log(chalk.yellow("\n🌲 TEST 10: Tree Select (File Explorer)"));
+    this.dim("   Use Arrows or Vim Keys (HJKL) to navigate. Enter to select.");
+
+    const tree = new TreeSelect({
+      title: "Explore Project Source Code:",
+      rootDir: process.cwd(), // Mulai dari root project
+      maxDepth: 5, // Safety limit
+    });
+
+    const selectedPath = await tree.run();
+
+    if (selectedPath) {
+      this.success(`Selected Path: ${selectedPath}`);
+    } else {
+      this.warn("Selection cancelled (Esc pressed).");
+    }
+
+    // --- 👆 END OF NEW TEST ---
 
     this.createBox("🎉 DEMO COMPLETED SUCCESSFULLY");
   }

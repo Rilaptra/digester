@@ -6,4 +6,4 @@ export * from "./tui/Confirm.js";
 export * from "./tui/MultiSelect.js";
 export * from "./tui/Select.js";
 export * from "./tui/TextPrompt.js";
-// Prompts.ts export removed as per refactor plan
+export * from "./tui/TreeSelect.js";
