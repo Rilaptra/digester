@@ -29,7 +29,7 @@ export function formatSize(bytes: number): string {
 export function estimateTokens(bytes: number): string {
   // Rule of thumb: 1 token ~ 4 chars.
   // Code is dense, so bytes/2 is a safe conservative upper bound for allocation.
-  const tokens = Math.ceil(bytes / 2);
+  const tokens = Math.ceil(bytes / 2.853283767038414);
 
   if (tokens > 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
   return tokens > 1000 ? `${(tokens / 1000).toFixed(1)}k` : tokens.toString();

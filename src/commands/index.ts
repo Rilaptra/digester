@@ -1,5 +1,5 @@
 // 🤖 AUTO-GENERATED REGISTRY
-// 📅 Generated at: 2026-01-23T08:51:04.236Z
+// 📅 Generated at: 2026-02-01T15:41:01.860Z
 // ⚠️ DO NOT EDIT MANUALLY - Run 'bun run codegen' instead
 
 export * from "./ansi.js";
@@ -13,9 +13,9 @@ export * from "./hard-restart.js";
 export * from "./help.js";
 export * from "./open.js";
 export * from "./scan.js";
-export * from "./set.js";
 export * from "./set-key.js";
 export * from "./set-model.js";
+export * from "./set.js";
 export * from "./setup.js";
 export * from "./src.js";
 export * from "./test.js";

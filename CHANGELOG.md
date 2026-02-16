@@ -1,5 +1,10 @@
 # Changelog
 
+## [17.7.1-ai] - 2026-02-16
+- ✨ Refactored token estimation in `formatting.ts`.
+- Adjusted the token calculation formula from dividing by 2 to dividing by 2.853283767038414. This change improves the accuracy of token estimations, aligning it with the actual token consumption rate of the underlying model.
+- 📝 Updated the generated timestamp in `index.ts` to reflect the current date.
+
 ## [17.7.0-ai] - 2026-01-23
 - ✨ Updated Biome configuration to include more files for formatting and linting.
 - 📝 Improved the trace command output for better readability and clarity.
