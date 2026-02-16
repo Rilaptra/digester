@@ -1,5 +1,15 @@
 # Changelog
 
+## [17.7.2-ai] - 2026-02-16
+- ✨ Improved Git operations with robust error handling.
+- 🛠️ Enhanced the update process to prevent data loss and provide clearer error messages.
+- 🐛 Fixed potential issues with Git commands failing silently.
+- ⚡️ Added checks for dirty states before updates to avoid merge conflicts.
+- ⚙️ Implemented detailed error messages for network issues, authentication failures, and Git conflicts.
+- 🧹 Refactored GitManager for better readability and maintainability.
+- 📝 Improved logging and user feedback during Git operations.
+
+
 ## [17.7.1-ai] - 2026-02-16
 - ✨ Refactored token estimation in `formatting.ts`.
 - Adjusted the token calculation formula from dividing by 2 to dividing by 2.853283767038414. This change improves the accuracy of token estimations, aligning it with the actual token consumption rate of the underlying model.

@@ -38,28 +38,32 @@ export class GitCommand extends BaseCommand {
     );
 
     this.createBox(`🌐 REMOTE DIGEST: ${repoName}`);
-    this.dim(`Target: ${repoUrl}`);
-    this.dim(`Temp Dir: ${tempDir}`);
 
     const cloneSpinner = this.spinner("Cloning repository (depth=1)...");
 
     try {
-      // 3. Git Clone (Shallow Clone for Speed)
-      // --depth 1 wajib biar gak download history 10 tahun ke belakang
+      // Gunakan Bun.spawn langsung disini biar control penuh,
+      // ATAU pake GitManager.exec kalau mau reusable (tapi ini case specific temp dir)
       const proc = Bun.spawn(
         ["git", "clone", "--depth", "1", repoUrl, tempDir],
-        {
-          stdio: ["ignore", "pipe", "pipe"], // Capture error if any
-        },
+        { stdio: ["ignore", "pipe", "pipe"] }, // Capture stderr
       );
 
       const exitCode = await proc.exited;
 
       if (exitCode !== 0) {
         const stderr = await new Response(proc.stderr).text();
-        cloneSpinner.fail("Failed to clone repository.");
-        this.error(stderr.trim());
-        return;
+        // 🔥 STOP SPINNER DENGAN PESAN ERROR
+        if (stderr.includes("not found")) {
+          throw new Error("Repository not found (404). Check URL.");
+        }
+        if (
+          stderr.includes("Permission denied") ||
+          stderr.includes("Authentication failed")
+        ) {
+          throw new Error("Access denied. Private repo requires auth.");
+        }
+        throw new Error(stderr.trim());
       }
 
       cloneSpinner.succeed("Repository cloned successfully.");
@@ -67,7 +71,9 @@ export class GitCommand extends BaseCommand {
       // 4. Perform Scan
       await this.scanRepo(tempDir, repoName);
     } catch (e) {
-      cloneSpinner.fail(`Error: ${(e as Error).message}`);
+      // 🔥 PASTIKAN FAIL DIPANGGIL
+      cloneSpinner.fail("Clone failed.");
+      this.error((e as Error).message);
     } finally {
       // 5. Cleanup (Wajib!)
       // Pake try-catch di finally biar kalau cleanup gagal, app gak crash bodoh

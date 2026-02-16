@@ -13,96 +13,106 @@ export class UpdateCommand extends BaseCommand {
     const targetDir = SYSTEM.ROOT_DIR;
     this.createBox("🚀 DIGESTER SELF-UPDATE SYSTEM");
 
-    // 1. Check if running from a Git Repo
+    // 1. Check if Repo
     if (!GitManager.isRepo(targetDir)) {
       this.error("❌ Digester is not installed via Git. Cannot auto-update.");
-      this.dim(
-        "   Try cloning the repo directly: git clone https://github.com/Rilaptra/digester.git",
-      );
       return;
+    }
+
+    // 2. 🔥 CHECK DIRTY STATE (Biar ga error conflict pas git pull)
+    // Ini krusial banget buat UX
+    if (await GitManager.isDirty(targetDir)) {
+      this.warn("⚠️  You have uncommitted local changes.");
+      this.dim("   Updating now might cause merge conflicts.");
+      const force = await this.promptYesNo(
+        "Discard local changes and update?",
+        false,
+      );
+
+      if (!force) {
+        this.error("Update aborted. Please commit or stash your changes.");
+        return;
+      }
+      // Kalau user nekat, kita hard reset (Dangerous but effective for tool update)
+      const resetSpin = this.spinner("Resetting local changes...");
+      try {
+        Bun.spawnSync(["git", "reset", "--hard", "HEAD"], { cwd: targetDir });
+        resetSpin.succeed("Local changes discarded.");
+      } catch {
+        resetSpin.fail("Failed to reset changes.");
+        return;
+      }
     }
 
     const spinner = this.spinner("Checking for updates...");
 
     try {
-      // 2. Fetch Origin
-      const fetchProc = Bun.spawn(["git", "fetch", "origin"], {
-        cwd: targetDir,
-      });
-      await fetchProc.exited;
+      // 3. Fetch (Bisa fail kalau ga ada internet)
+      await GitManager.fetch(targetDir);
 
-      // 3. Compare Local vs Remote HEAD
-      const localHash = await this.getHash(targetDir, "HEAD");
-      const remoteHash = await this.getHash(targetDir, "origin/main"); // Asumsi branch utama 'main'
+      const localHash = await GitManager.getHash(targetDir, "HEAD");
+      const remoteHash = await GitManager.getHash(targetDir, "origin/main");
 
       if (!localHash || !remoteHash) {
-        spinner.fail("Failed to retrieve git hashes.");
-        return;
+        throw new Error("Could not retrieve version hashes.");
       }
 
       if (localHash === remoteHash) {
         spinner.succeed(
           chalk.green("You are already on the latest version! ✨"),
         );
-        this.dim(`   Current Hash: ${localHash.substring(0, 7)}`);
         return;
       }
 
-      spinner.text = `Update found! ${chalk.dim(localHash.substring(0, 7))} ➜ ${chalk.green(remoteHash.substring(0, 7))}`;
-      spinner.stop();
+      spinner.stop(); // Stop dulu buat prompt
 
-      const confirm = await this.promptYesNo(
-        `${chalk.bold("🔥 New version available!")} Update now?`,
+      generateLog(
+        { type: "info" },
+        `Update available: ${chalk.dim(localHash.slice(0, 7))} ➜ ${chalk.green(remoteHash.slice(0, 7))}`,
       );
 
+      const confirm = await this.promptYesNo(
+        `${chalk.bold("🔥 Install Update?")} This will rebuild the binary.`,
+      );
       if (!confirm) {
-        this.dim("Update cancelled.");
+        this.dim("Cancelled.");
         return;
       }
 
-      // 4. Perform Update
-      const updateSpinner = this.spinner("Pulling latest changes...");
+      // 4. Perform Update Sequence
+      const updateSpinner = this.spinner("🚀 Pulling latest changes...");
 
-      // GIT PULL
-      const pullProc = Bun.spawn(["git", "pull", "origin", "main"], {
-        cwd: targetDir,
-        stderr: "pipe",
-      });
-      const pullExit = await pullProc.exited;
-      if (pullExit !== 0) {
-        const err = await new Response(pullProc.stderr).text();
-        throw new Error(`Git pull failed: ${err}`);
-      }
-      updateSpinner.text = "Installing dependencies (bun install)...";
+      // Git Pull (Pake manager yang baru, bakal throw error kalo conflict/network fail)
+      await GitManager.pull(targetDir);
 
-      // BUN INSTALL
+      updateSpinner.text = "📦 Installing dependencies...";
       const installProc = Bun.spawn(["bun", "install"], { cwd: targetDir });
-      await installProc.exited;
+      if ((await installProc.exited) !== 0)
+        throw new Error("Bun install failed");
 
-      updateSpinner.text = "Re-building binary (bun run build)...";
-
-      // BUN BUILD
+      updateSpinner.text = "🏗️  Re-building binary...";
       const buildProc = Bun.spawn(["bun", "run", "build"], { cwd: targetDir });
-      await buildProc.exited;
+      if ((await buildProc.exited) !== 0) throw new Error("Build failed");
 
       updateSpinner.succeed("✅ Digester successfully updated!");
 
       generateLog(
         { type: "success", raw: true },
-        `${chalk.bgGreen.black("\n RESTART REQUIRED ")} Please restart your terminal/command.`,
+        `${chalk.bgGreen.black("\n RESTART REQUIRED ")} Please restart your terminal.`,
       );
     } catch (e) {
-      spinner.fail(chalk.red(`Update failed: ${(e as Error).message}`));
-    }
-  }
+      // 🔥 INI FIX UTAMANYA: Catch block yang proper
+      // Apapun errornya (Network, Git, Bun), spinner BERHENTI disini.
+      spinner.fail(chalk.red("Update Failed!"));
 
-  private async getHash(dir: string, ref: string): Promise<string> {
-    try {
-      const proc = Bun.spawn(["git", "rev-parse", ref], { cwd: dir });
-      const text = await new Response(proc.stdout).text();
-      return text.trim();
-    } catch {
-      return "";
+      const msg = (e as Error).message;
+      if (msg.includes("Network")) {
+        this.error("🌐 Network Error: Check your internet connection.");
+      } else if (msg.includes("Conflict")) {
+        this.error("⚔️  Merge Conflict detected during update.");
+      } else {
+        this.error(`❌ Details: ${msg}`);
+      }
     }
   }
 }
