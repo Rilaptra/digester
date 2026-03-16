@@ -7,7 +7,7 @@ async function build() {
     const template = await fs.readFile('./index.html', 'utf-8');
 
     // Escape backticks in MD for JS template string
-    const escapedMd = docMd.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+    const escapedMd = docMd.replace(/`/g, '\\`');
 
     const finalHtml = template.replace('CONTENT_PLACEHOLDER', escapedMd);
 
