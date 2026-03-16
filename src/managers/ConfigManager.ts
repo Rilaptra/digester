@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: Static class> */
-import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { readdir } from "node:fs/promises";
 import chalk from "chalk";
 import { DEFAULT_CONFIG, SYSTEM } from "../constants/defaults.js";
 import type { AppConfig, AuthConfig } from "../types/index.js";
@@ -34,17 +34,12 @@ export class ConfigManager {
         const user = await cfgFile.json();
         const patterns = user.ignorePatterns || user.ignoredPatterns;
         if (Array.isArray(patterns)) {
-          patterns.forEach((x: string) => {
-            final.ignoredPatterns.add(x);
-          });
+          for (const x of patterns) final.ignoredPatterns.add(x);
         }
 
-        const exts =
-          user.ignoreExtensions || user.ignoredExts || user.ignoreExts;
+        const exts = user.ignoreExtensions || user.ignoredExts || user.ignoreExts;
         if (Array.isArray(exts)) {
-          exts.forEach((x: string) => {
-            final.ignoredExts.add(x);
-          });
+          for (const x of exts) final.ignoredExts.add(x);
         }
 
         const maxKB = user.defaultLimitKB || user.maxFileSizeKB;
@@ -62,18 +57,20 @@ export class ConfigManager {
     }
 
     // 2. Load .gitignore
-    try {
-      const gitPath = join(targetDir, ".gitignore");
-      const gitFile = Bun.file(gitPath);
-      if (await gitFile.exists()) {
+    const gitPath = join(targetDir, ".gitignore");
+    const gitFile = Bun.file(gitPath);
+    if (await gitFile.exists()) {
+      try {
         const txt = await gitFile.text();
-        txt.split("\n").forEach((line) => {
-          const l = line.trim();
-          if (l && !l.startsWith("#"))
+        const lines = txt.split("\n");
+        for (let i = 0; i < lines.length; i++) {
+          const l = lines[i].trim();
+          if (l && !l.startsWith("#")) {
             final.ignoredPatterns.add(l.replace(/^\/|\/$/g, ""));
-        });
-      }
-    } catch {}
+          }
+        }
+      } catch {}
+    }
 
     return final;
   }
@@ -128,6 +125,7 @@ export class ConfigManager {
 
   /**
    * Lists TypeScript files in predefined directories of the target project.
+   * Optimized for Bun.
    *
    * @param targetDir - The root directory to scan.
    * @returns A promise that resolves to an array of relative paths to .ts files.
@@ -139,13 +137,10 @@ export class ConfigManager {
     for (const d of dirsToScan) {
       const dirPath = join(targetDir, d);
       try {
-        const { readdirSync, statSync } = await import("node:fs");
-        if (existsSync(dirPath) && statSync(dirPath).isDirectory()) {
-          const files = readdirSync(dirPath);
-          for (const f of files) {
-            if (f.endsWith(".ts")) {
-              results.push(join(d, f).replace(/\\/g, "/"));
-            }
+        const files = await readdir(dirPath);
+        for (const f of files) {
+          if (f.endsWith(".ts")) {
+            results.push(join(d, f).replace(/\\/g, "/"));
           }
         }
       } catch {}

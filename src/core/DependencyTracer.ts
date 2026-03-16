@@ -4,12 +4,11 @@
 /** biome-ignore-all lint/suspicious/noAssignInExpressions: <explanation: Biome> */
 /** biome-ignore-all lint/style/noNonNullAssertion: <explanation: Biome> */
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: Biome> */
-import { readFile, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { existsSync } from "node:fs";
 
 /**
  * Handles dependency graph resolution.
+ * Optimized for Bun's fast file system access.
  */
 export class DependencyTracer {
   // Regex to catch:
@@ -41,7 +40,8 @@ export class DependencyTracer {
       visited.add(current);
 
       try {
-        const content = await readFile(current, "utf-8");
+        const file = Bun.file(current);
+        const content = await file.text();
         const imports = this.extractImports(content);
 
         for (const imp of imports) {
@@ -50,7 +50,7 @@ export class DependencyTracer {
 
           if (resolved) {
             // Security: Only trace files INSIDE the project root
-            // and avoid node_modules (unless you want to trace them too, usually no)
+            // and avoid node_modules
             if (
               resolved.startsWith(absRoot) &&
               !resolved.includes("node_modules")
@@ -98,37 +98,35 @@ export class DependencyTracer {
   ): Promise<string | null> {
     const fullPath = resolve(baseDir, importPath);
 
-    // 1. Direct match (Ex: import "./data.json" or real .js file)
-    if (existsSync(fullPath)) {
-      const s = await stat(fullPath);
-      if (s.isFile()) return fullPath;
-      if (s.isDirectory()) return this.resolveIndex(fullPath);
+    // 1. Direct match
+    const directFile = Bun.file(fullPath);
+    if (await directFile.exists()) {
+      return fullPath;
     }
 
-    // 🔥 FIX UTAMA: Handle import .js tapi aslinya .ts
-    // Bun/TS sering import pake .js padahal source-nya .ts
+    // 🔥 ESM/Bun Fix: Handle .js imports pointing to .ts/.tsx files
     if (fullPath.endsWith(".js")) {
-      const tsPath = fullPath.replace(/\.js$/, ".ts");
-      if (existsSync(tsPath)) return tsPath;
+      const tsPath = fullPath.slice(0, -3) + ".ts";
+      if (await Bun.file(tsPath).exists()) return tsPath;
 
-      const tsxPath = fullPath.replace(/\.js$/, ".tsx");
-      if (existsSync(tsxPath)) return tsxPath;
+      const tsxPath = fullPath.slice(0, -3) + ".tsx";
+      if (await Bun.file(tsxPath).exists()) return tsxPath;
     }
 
-    // 2. Try extensions (Ex: import "./utils")
+    // 2. Try extensions
     for (const ext of this.EXTS) {
       const withExt = fullPath + ext;
-      if (existsSync(withExt)) return withExt;
+      if (await Bun.file(withExt).exists()) return withExt;
     }
 
-    // 3. Try directory index (Ex: import "./utils")
+    // 3. Try directory index
     return this.resolveIndex(fullPath);
   }
 
   private static async resolveIndex(dirPath: string): Promise<string | null> {
     for (const ext of this.EXTS) {
       const indexPath = join(dirPath, `index${ext}`);
-      if (existsSync(indexPath)) return indexPath;
+      if (await Bun.file(indexPath).exists()) return indexPath;
     }
     return null;
   }

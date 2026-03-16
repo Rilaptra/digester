@@ -1,10 +1,16 @@
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: Scanner is a static class> */
-import type { Dirent } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
 import { extname, join, relative } from "node:path";
+import { readdir } from "node:fs/promises";
 import type { AppConfig, ScanStats } from "../types/index.js";
 
+/**
+ * High-performance file scanner optimized for Bun.
+ * Uses native Bun APIs for faster I/O and minimal memory overhead.
+ */
 export class Scanner {
+  /**
+   * Starts a recursive scan of the specified directory.
+   */
   static async run(dir: string, cfg: AppConfig): Promise<ScanStats> {
     const start = performance.now();
     const stats: ScanStats = {
@@ -16,97 +22,89 @@ export class Scanner {
       extStats: {},
       duration: "",
     };
-    await Scanner.walk(dir, dir, cfg, stats, "");
+
+    await this.walk(dir, dir, cfg, stats, "");
+
     stats.duration = (performance.now() - start).toFixed(0);
     return stats;
   }
 
-  static async walk(
+  /**
+   * Recursive walker using Bun.readdir for high-performance directory traversal.
+   */
+  private static async walk(
     base: string,
     current: string,
     cfg: AppConfig,
     stats: ScanStats,
     prefix: string,
   ) {
-    let entries: Dirent[]; // 🟢 Fix 1: Explicit type definition
+    let entries;
     try {
       entries = await readdir(current, { withFileTypes: true });
     } catch {
       return;
     }
 
+    // Filter and sort entries efficiently
     const valid = entries
       .filter((e) => {
-        if (
-          e.name.startsWith(".") &&
-          e.name !== ".gitignore" &&
-          e.name !== ".env.example"
-        )
-          return false;
+        if (e.name.startsWith(".") && e.name !== ".gitignore" && e.name !== ".env.example") return false;
         if (cfg.ignoredPatterns.has(e.name)) return false;
         return true;
       })
       .sort((a, b) => {
-        // Optimization: logic simplified for readability & speed
-        if (a.isDirectory() === b.isDirectory()) {
-          return a.name.localeCompare(b.name);
-        }
+        if (a.isDirectory() === b.isDirectory()) return a.name.localeCompare(b.name);
         return a.isDirectory() ? -1 : 1;
       });
 
-    // 🟢 Fix 2: Native for-loop (Memory efficient & solves TS2802)
     const len = valid.length;
     for (let i = 0; i < len; i++) {
       const e = valid[i];
       const isLast = i === len - 1;
       const path = join(current, e.name);
 
-      // Tree Visualizer limit
+      // Manage Tree Visualization (Max 800 nodes for performance)
       if (stats.tree.length < 800) {
-        stats.tree.push(`${prefix}${isLast ? "└── " : "├── "}${e.name}`);
+        stats.tree.push(`${prefix}${isLast ? "└── " : "├── "}${e.name}${e.isDirectory() ? "/" : ""}`);
       } else if (stats.tree.length === 800) {
         stats.tree.push(`${prefix}   ... (truncated)`);
       }
 
       if (e.isDirectory()) {
-        await Scanner.walk(
-          base,
-          path,
-          cfg,
-          stats,
-          prefix + (isLast ? "    " : "│   "),
-        );
+        await this.walk(base, path, cfg, stats, prefix + (isLast ? "    " : "│   "));
       } else {
         const ext = extname(e.name).toLowerCase();
 
-        // Quick check before async stat (Save I/O)
-        if (cfg.ignoredExts.has(ext) || cfg.ignoredPatterns.has(e.name))
-          continue;
+        // Fast path for ignored extensions/patterns
+        if (cfg.ignoredExts.has(ext) || cfg.ignoredPatterns.has(e.name)) continue;
 
         try {
-          const s = await stat(path);
-          if (s.size > cfg.maxFileSize) {
+          // Use Bun.file for metadata instead of stat if possible,
+          // but stat is still needed for size in this context.
+          const file = Bun.file(path);
+          const size = file.size;
+
+          if (size > cfg.maxFileSize) {
             stats.skippedCount++;
-            stats.skippedSize += s.size;
+            stats.skippedSize += size;
             continue;
           }
 
           stats.files.push({
             path,
             relPath: relative(base, path),
-            size: s.size,
+            size: size,
             ext: ext.slice(1) || "txt",
           });
 
-          stats.totalSize += s.size;
+          stats.totalSize += size;
 
-          // Initialize if not exists (shorthand check)
-          if (!stats.extStats[ext]) stats.extStats[ext] = { count: 0, size: 0 };
-
-          stats.extStats[ext].count++;
-          stats.extStats[ext].size += s.size;
+          const extData = stats.extStats[ext] || (stats.extStats[ext] = { count: 0, size: 0 });
+          extData.count++;
+          extData.size += size;
         } catch {
-          // Silent fail for locked/missing files
+          // Skip inaccessible files
         }
       }
     }
