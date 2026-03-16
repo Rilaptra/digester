@@ -5,6 +5,7 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: <explanation: Biome> */
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: Biome> */
 import { dirname, join, resolve } from "node:path";
+import { stat } from "node:fs/promises";
 
 /**
  * Handles dependency graph resolution.
@@ -101,7 +102,14 @@ export class DependencyTracer {
     // 1. Direct match
     const directFile = Bun.file(fullPath);
     if (await directFile.exists()) {
-      return fullPath;
+      // If it's a directory, we should try index files instead
+      try {
+        const s = await stat(fullPath);
+        if (s.isDirectory()) return this.resolveIndex(fullPath);
+        return fullPath;
+      } catch {
+        return null;
+      }
     }
 
     // 🔥 ESM/Bun Fix: Handle .js imports pointing to .ts/.tsx files
