@@ -1,6 +1,9 @@
 # Changelog
 
 ### [2026-07-20]
+- 🧹 Revert accidental version increment to maintain consistency with previous release cycle.
+
+### [2026-07-20]
 - 🕒 Update generation timestamp in src/commands/index.ts to reflect the most recent build sequence.
 
 ### [2026-07-20]
