@@ -1,6 +1,10 @@
 # Changelog
 
 ### [2026-07-20]
+- 🏷️ Revert package.json version to 17.7.2-ai to maintain release consistency
+- ⚙️ Update generated timestamp in src/commands/index.ts
+
+### [2026-07-20]
 - 🧹 Revert accidental version increment to maintain consistency with previous release cycle.
 
 ### [2026-07-20]
