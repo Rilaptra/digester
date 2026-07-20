@@ -1,5 +1,9 @@
 # Changelog
 
+## [17.7.3-ai] - 2026-07-20
+- ⚙️ Update build timestamp in src/commands/index.ts to reflect current runtime
+- 📦 Increment internal version string to 17.7.5-ai in src/index.ts
+
 ### [2026-07-20]
 - 🏷️ Revert package.json version to 17.7.2-ai to maintain release consistency
 - ⚙️ Update generated timestamp in src/commands/index.ts
