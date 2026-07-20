@@ -1,0 +1,8 @@
+src/
+scripts/
+.github/
+.gitignore
+biome.json
+bun.lock
+prompter.config.json
+tsconfig.json

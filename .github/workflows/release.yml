@@ -1,0 +1,67 @@
+name: Build & Release Binaries 🚀
+
+on:
+  push:
+    tags:
+      - "v*" # Trigger cuma kalau ada tag baru (v1.0.0, v2.1.3, dll)
+
+permissions:
+  contents: write # Wajib biar bisa upload ke Releases
+
+jobs:
+  build-and-release:
+    name: 🏗️ Build & Release
+    runs-on: ubuntu-latest # Kita pake Linux VM aja, Bun bisa cross-compile!
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: 📦 Install Dependencies
+        run: bun install
+
+      # --- 📦 NPM PUBLISH STEP ---
+      # Publish ke NPM dulu sebelum dist/ penuh dengan binary exe
+
+      - name: 🔨 Build for NPM
+        run: bun run build
+
+      - name: 🔑 Authenticate with NPM
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 🚀 Publish to NPM
+        run: bun publish --access public
+
+      # --- 🏗️ COMPILE STEP (Cross-Platform) ---
+
+      - name: 🪟 Build for Windows (x64)
+        run: bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile dist/digester-win-x64.exe
+
+      - name: 🐧 Build for Linux (x64)
+        run: bun build ./src/index.ts --compile --target=bun-linux-x64 --outfile dist/digester-linux-x64
+
+      - name: 🍎 Build for macOS (Silicon/M1+)
+        run: bun build ./src/index.ts --compile --target=bun-darwin-arm64 --outfile dist/digester-macos-arm64
+
+      - name: 🍎 Build for macOS (Intel)
+        run: bun build ./src/index.ts --compile --target=bun-darwin-x64 --outfile dist/digester-macos-x64
+
+      # --- 🚀 RELEASE STEP ---
+
+      - name: 🎉 Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/digester-win-x64.exe
+            dist/digester-linux-x64
+            dist/digester-macos-arm64
+            dist/digester-macos-x64
+          generate_release_notes: true # Otomatis generate notes dari commit message
