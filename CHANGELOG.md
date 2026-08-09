@@ -1,5 +1,11 @@
 # Changelog
 
+## [17.11.1-ai] - 2026-08-09
+- 📝 Update README.md to reflect project rebranding from Digester CLI to digester
+- ✨ Add comprehensive feature capabilities list including AI auto-commit, secret scanner, and dependency tracer
+- 📦 Update installation instructions for NPM and cross-platform binary downloads
+- 🚀 Revise quick start guide, command tables, architecture layout, and development workflow
+
 ## [17.11.0-ai] - 2026-08-09
 - 🚀 Add GitHub Packages publishing step alongside npm publish
 - ⚙️ Add packages: write permissions to the release workflow
