@@ -1,5 +1,11 @@
 # Changelog
 
+## [17.11.0-ai] - 2026-08-09
+- 🚀 Add GitHub Packages publishing step alongside npm publish
+- ⚙️ Add packages: write permissions to the release workflow
+- 🔑 Configure authentication for GitHub Packages using GITHUB_TOKEN
+- 🛠️ Clean up comments and formatting in release.yml
+
 ## [17.10.3-ai] - 2026-08-09
 - 🛠️ Refactor commit command logic to simplify target directory handling and remove redundant interactive release workflow generation
 - 📦 Upgrade Biome schema to version 2.5.2 and adjust dependency resolutions in `bun.lock`
