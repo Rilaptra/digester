@@ -136,11 +136,9 @@ export class AIManager {
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error("Empty response from AI");
 
-      const cleanJson = text
-        .replace(/^```json\s*/g, "")
-        .replace(/^```\s*/g, "")
-        .replace(/\s*```$/g, "")
-        .trim();
+      // 🔥 FIX 3: Robust Markdown Stripping (Nggak peduli kalau ada teks di depan/belakang)
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      const cleanJson = match ? match[1].trim() : text.trim();
 
       return JSON.parse(cleanJson);
     } catch (e) {

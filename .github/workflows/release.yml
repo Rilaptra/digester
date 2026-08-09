@@ -26,18 +26,18 @@ jobs:
         run: bun install
 
       # --- 📦 NPM PUBLISH STEP ---
-      # Publish ke NPM dulu sebelum dist/ penuh dengan binary exe
-
       - name: 🔨 Build for NPM
         run: bun run build
 
+      # 🔥 FIX 1: Pindahkan .npmrc ke global home directory biar aman kebaca
       - name: 🔑 Authenticate with NPM
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      # 🔥 FIX 2: Gunakan 'npm publish' (bawaan ubuntu) buat bypass bug Bun
       - name: 🚀 Publish to NPM
-        run: bun publish --access public
+        run: npm publish --access public
 
       # --- 🏗️ COMPILE STEP (Cross-Platform) ---
 

@@ -10,7 +10,7 @@ export class SetupCommand extends BaseCommand {
   public aliases = [];
 
   public async execute(_args: string[]): Promise<void> {
-    this.createBox("🛠️  PROMPTER SETUP WIZARD");
+    this.createBox("PROMPTER SETUP WIZARD");
 
     if (process.platform !== "win32") {
       this.warn("Automatic setup is optimized for Windows.");

@@ -259,4 +259,102 @@ export abstract class BaseCommand {
 
     return result;
   }
+
+  /**
+   * Prompt dengan autocomplete + path-aware filtering.
+   *
+   * 🔥 Ngetik "src/" → filter hanya children src
+   * 🔥 Ngetik "src/co" → filter hanya src/commands, src/core
+   * 🔥 Ngetik ".ts" → filter ext
+   */
+  protected async promptAutoComplete(
+    message: string,
+    suggestions: string[],
+    options?: {
+      initialValue?: string;
+      limit?: number;
+      separator?: string | RegExp;
+    },
+  ): Promise<string> {
+    const ac = new Utils.AutoComplete({
+      title: message,
+      selectMode: true,
+      suggest: (token: string) => {
+        if (!token || token.length === 0) {
+          return suggestions.slice(0, options?.limit || 20);
+        }
+
+        const lower = token.toLowerCase();
+
+        // ═══════════════════════════════════════
+        // 🔥 PATH-AWARE FILTERING
+        // ═══════════════════════════════════════
+
+        // Kalau token mengandung "/" → user lagi navigate sub-folder
+        if (lower.includes("/")) {
+          const lastSlash = lower.lastIndexOf("/");
+          const prefix = lower.slice(0, lastSlash + 1); // e.g., "src/"
+          const searchTerm = lower.slice(lastSlash + 1); // e.g., "co"
+
+          // Filter: harus mulai dari prefix
+          const children = suggestions.filter((s) =>
+            s.toLowerCase().startsWith(prefix),
+          );
+
+          if (searchTerm.length === 0) {
+            // Ngetik "src/" → tampilkan semua children
+            return children.slice(0, options?.limit || 20);
+          }
+
+          // Ngetik "src/co" → tampilkan children yang match "co"
+          const startsWith = children.filter((s) => {
+            const afterPrefix = s.slice(prefix.length);
+            return afterPrefix.toLowerCase().startsWith(searchTerm);
+          });
+
+          const includes = children.filter((s) => {
+            const afterPrefix = s.slice(prefix.length);
+            return (
+              !afterPrefix.toLowerCase().startsWith(searchTerm) &&
+              afterPrefix.toLowerCase().includes(searchTerm)
+            );
+          });
+
+          return [...startsWith, ...includes].slice(0, options?.limit || 20);
+        }
+
+        // ═══════════════════════════════════════
+        // 🔥 EXT-AWARE FILTERING
+        // ═══════════════════════════════════════
+        if (lower.startsWith(".") && lower.length <= 5) {
+          const extMatches = suggestions.filter((s) =>
+            s.toLowerCase().startsWith(lower),
+          );
+          if (extMatches.length > 0) {
+            return extMatches.slice(0, options?.limit || 20);
+          }
+        }
+
+        // ═══════════════════════════════════════
+        // 🔥 DEFAULT: startsWith + includes
+        // ═══════════════════════════════════════
+        const startsWith = suggestions.filter((s) =>
+          s.toLowerCase().startsWith(lower),
+        );
+
+        const includes = suggestions.filter(
+          (s) =>
+            !s.toLowerCase().startsWith(lower) &&
+            s.toLowerCase().includes(lower),
+        );
+
+        return [...startsWith, ...includes].slice(0, options?.limit || 20);
+      },
+      initialValue: options?.initialValue,
+      limit: options?.limit ?? 10,
+      separator: options?.separator ?? " ", // 🔥 FIX: Gunakan Nullish Coalescing
+    });
+
+    return ac.run();
+  }
 }

@@ -23,8 +23,10 @@ export const SYSTEM = {
   CHUNK_SIZE: 64 * 1024,
 };
 
-export const DEFAULT_CONFIG = {
-  ignoredPatterns: [
+import type { AppConfig } from "../types/index.js";
+
+export const DEFAULT_CONFIG: AppConfig = {
+  ignoredPatterns: new Set([
     "node_modules",
     ".git",
     ".next",
@@ -53,8 +55,8 @@ export const DEFAULT_CONFIG = {
     ".contentlayer",
     "prompter.config.json",
     "auth.config.json",
-  ],
-  ignoredExts: [
+  ]),
+  ignoredExts: new Set([
     ".png",
     ".jpg",
     ".jpeg",
@@ -90,7 +92,8 @@ export const DEFAULT_CONFIG = {
     ".pdb",
     ".lock",
     ".tsbuildinfo",
-  ],
-  maxFileSizeKB: 500,
+  ]),
+  maxFileSize: 500,
+  forceInclude: new Set(), // ← BARU
   prePushScripts: [],
 };

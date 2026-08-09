@@ -132,18 +132,33 @@ export class GitManager {
         cwd: targetDir,
         stdio: ["inherit", "inherit", "inherit"],
       });
-      await commitProc.exited;
+      const commitExitCode = await commitProc.exited;
+
+      // 🔥 FIX: Kalau Git gagal (misal karena email belum di-set / nggak ada yang di-commit), STOP!
+      if (commitExitCode !== 0) {
+        throw new Error(
+          `Git commit failed with exit code ${commitExitCode}. Check your git config or staged files.`,
+        );
+      }
 
       if (tag) {
         const tagProc = Bun.spawn(["git", "tag", `v${tag}`], {
           cwd: targetDir,
           stdio: ["inherit", "inherit", "inherit"],
         });
-        await tagProc.exited;
-        generateLog({ type: "success" }, chalk.green(`   🏷️  Tagged v${tag}`));
+        const tagExitCode = await tagProc.exited;
+
+        if (tagExitCode === 0) {
+          generateLog({ type: "success" }, chalk.green(`   🏷️  Tagged v${tag}`));
+        } else {
+          generateLog(
+            { type: "warn" },
+            chalk.yellow(`   ⚠️  Failed to tag v${tag}`),
+          );
+        }
       }
     } catch (e) {
-      generateLog({ type: "error" }, chalk.red("❌ Git commit failed."));
+      generateLog({ type: "error" }, chalk.red("❌ Git operation failed."));
       throw e;
     }
   }

@@ -120,7 +120,7 @@ export class AnsiCommand extends BaseCommand {
 
   private parseColor(color: string): { r: number; g: number; b: number } {
     const match = color.match(/\d+/g);
-    if (!match || match.length !== 3) {
+    if (match?.length !== 3) {
       throw new Error(`Invalid color format: ${color}`);
     }
     return {

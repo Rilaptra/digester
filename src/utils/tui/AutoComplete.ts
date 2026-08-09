@@ -1,14 +1,9 @@
 // --- src/utils/tui/AutoComplete.ts ---
 /** biome-ignore-all lint/style/noNonNullAssertion: <explanation: biome-ignore> */
+
 import { emitKeypressEvents } from "node:readline";
 import chalk from "chalk";
 
-/**
- * The suggester function provided by the developer.
- * @param token - The specific word/token currently being edited (e.g., "src/u").
- * @param fullInput - The entire input string (e.g., "cd src/u").
- * @returns A list of suggestions to replace the current token (e.g., ["src/utils/", "src/users/"]).
- */
 export type AutoCompleteSuggester = (
   token: string,
   fullInput: string,
@@ -16,18 +11,19 @@ export type AutoCompleteSuggester = (
 
 export interface AutoCompleteConfig {
   title: string;
-  /**
-   * Function to generate suggestions dynamically.
-   * Replaces static 'options'.
-   */
   suggest: AutoCompleteSuggester;
-  /**
-   * Character used to split tokens. Default is space (" ").
-   * Can be a string or Regex.
-   */
   separator?: string | RegExp;
   limit?: number;
   initialValue?: string;
+  /**
+   * 🔥 BARU: Select Mode
+   *
+   * false (default) → Enter konfirmasi teks yang diketik (command-line style)
+   * true            → Enter PILIH suggestion yang di-highlight (search-select style)
+   *
+   * Pakai true untuk config editor, pakai false untuk command input.
+   */
+  selectMode?: boolean;
 }
 
 export class AutoComplete {
@@ -35,39 +31,41 @@ export class AutoComplete {
   private input = "";
   private cursorPos = 0;
 
-  // State Management
   private suggestions: string[] = [];
   private selectedIndex = 0;
   private scrollOffset = 0;
   private lastRenderHeight = 0;
 
-  // Token Management
   private activeToken = "";
   private tokenStart = 0;
   private tokenEnd = 0;
+
+  // 🔥 BARU: Track apakah user sudah pernah ngetik
+  // Biar kita tau apakah input di-modifikasi manual atau belum
+  protected hasTyped = false;
 
   constructor(config: AutoCompleteConfig) {
     this.config = {
       limit: 10,
       separator: " ",
+      selectMode: false,
       ...config,
     };
+
+    // 🔥 FIX: Cegah eksplisit 'undefined' nimpuk default separator
+    if (this.config.separator === undefined) {
+      this.config.separator = " ";
+    }
+
     this.input = config.initialValue || "";
     this.cursorPos = this.input.length;
   }
 
-  /**
-   * Core Logic: Parses the input, identifies the active token,
-   * and fetches suggestions from the developer's logic.
-   */
   private async refreshSuggestions() {
-    // 1. Identify Token Boundaries based on Cursor Position
     const sep = this.config.separator!;
     let start = 0;
     let end = this.input.length;
 
-    // Simple tokenizer logic handling specific cursor position
-    // We scan left and right from cursor until we hit a separator
     for (let i = this.cursorPos - 1; i >= 0; i--) {
       if (this.input[i].match(sep)) {
         start = i + 1;
@@ -85,19 +83,13 @@ export class AutoComplete {
     this.tokenEnd = end;
     this.activeToken = this.input.slice(start, end);
 
-    // 2. Fetch Suggestions from Developer
     try {
       const rawSuggestions = await this.config.suggest(
         this.activeToken,
         this.input,
       );
-
-      // 3. Filter visually (Optional, but good UX to verify match)
-      // Usually developer returns relevant stuff, but we can fuzzy highlight
-      // For now, we assume developer returns valid replacements for the token.
       this.suggestions = rawSuggestions;
 
-      // Reset selection if list changed drastically
       if (this.selectedIndex >= this.suggestions.length) {
         this.selectedIndex = 0;
         this.scrollOffset = 0;
@@ -114,7 +106,6 @@ export class AutoComplete {
     stdin.resume();
     emitKeypressEvents(stdin);
 
-    // Initial Fetch
     await this.refreshSuggestions();
 
     stdout.write("\x1B[?25l");
@@ -122,26 +113,29 @@ export class AutoComplete {
     const render = () => {
       // 1. CLEANUP
       if (this.lastRenderHeight > 0) {
-        stdout.write(`\x1B[${this.lastRenderHeight}B`); // Go down to bottom of rendering
-        stdout.write(`\x1B[${this.lastRenderHeight}A`); // Go back up
-        stdout.write("\x1B[J"); // Clear everything below
+        stdout.write(`\x1B[${this.lastRenderHeight}B`);
+        stdout.write(`\x1B[${this.lastRenderHeight}A`);
+        stdout.write("\x1B[J");
       }
 
       // 2. RENDER INPUT LINE
-      stdout.write("\x1B[2K\r"); // Clear line
+      stdout.write("\x1B[2K\r");
       const qMark = chalk.cyan("? ");
       const title = chalk.bold(this.config.title);
       const pointer = chalk.dim("›");
 
-      // Highlight Token being edited
       const before = this.input.slice(0, this.tokenStart);
       const token = this.input.slice(this.tokenStart, this.tokenEnd);
       const after = this.input.slice(this.tokenEnd);
 
-      // Visual feedback: Token yang aktif warnanya beda dikit (misal underline)
       const coloredInput = `${before}${chalk.underline(token)}${after}`;
 
-      stdout.write(`${qMark}${title} ${pointer} ${coloredInput}`);
+      // 🔥 BARU: Show mode hint di selectMode
+      const modeHint = this.config.selectMode
+        ? chalk.dim(" [↑↓ navigate, Enter select]")
+        : "";
+
+      stdout.write(`${qMark}${title} ${pointer} ${coloredInput}${modeHint}`);
 
       // 3. RENDER SUGGESTIONS
       const limit = this.config.limit || 5;
@@ -158,11 +152,9 @@ export class AutoComplete {
           const realIndex = this.scrollOffset + idx;
           const isSelected = realIndex === this.selectedIndex;
 
-          // Highlight matching part of the token
           const matchLen = this.activeToken.length;
           let displaySug = sug;
 
-          // Simple highlighting: if suggestion starts with token, color it
           if (
             sug.toLowerCase().startsWith(this.activeToken.toLowerCase()) &&
             matchLen > 0
@@ -175,12 +167,15 @@ export class AutoComplete {
           }
 
           if (isSelected) {
-            return `${chalk.cyan("❯")} ${chalk.bold.white(sug)}`; // Selected is bright white
+            // 🔥 BARU: Di selectMode, highlight lebih jelas
+            if (this.config.selectMode) {
+              return `${chalk.cyan("❯")} ${chalk.bold.white(sug)}`;
+            }
+            return `${chalk.cyan("❯")} ${chalk.bold.white(sug)}`;
           }
           return `  ${displaySug}`;
         });
 
-        // Scrollbar hints
         if (total > limit) {
           const progress = Math.round(
             (this.scrollOffset / (total - limit)) * 100,
@@ -191,6 +186,13 @@ export class AutoComplete {
             ),
           );
         }
+      } else {
+        // 🔥 BARU: Show "no match" feedback
+        if (this.activeToken.length > 0) {
+          linesToPrint.push(
+            chalk.dim(`  (no match for "${this.activeToken}")`),
+          );
+        }
       }
 
       // 4. PRINT SUGGESTIONS
@@ -198,16 +200,16 @@ export class AutoComplete {
         stdout.write("\n");
         stdout.write(linesToPrint.join("\n"));
         this.lastRenderHeight = linesToPrint.length;
-        stdout.write(`\x1B[${this.lastRenderHeight}A`); // Move back to input line
+        stdout.write(`\x1B[${this.lastRenderHeight}A`);
       } else {
         this.lastRenderHeight = 0;
       }
 
       // 5. POSITION CURSOR
-      // Prefix length: "? " (2) + Title + " › " (3)
-      const prefixLen = 2 + this.config.title.length + 3;
+      const prefixLen =
+        2 + this.config.title.length + 3 + (this.config.selectMode ? 30 : 0); // adjust for mode hint
       const visualCursor = prefixLen + this.cursorPos;
-      stdout.write(`\x1B[${visualCursor + 1}G`);
+      stdout.write(`\x1B[${Math.min(visualCursor + 1, 200)}G`);
     };
 
     render();
@@ -225,16 +227,34 @@ export class AutoComplete {
         switch (key.name) {
           case "return":
           case "enter": {
-            stdout.write("\x1B[J"); // Clear suggestions
-            stdout.write("\x1B[2K\r"); // Clear line
+            stdout.write("\x1B[J");
+            stdout.write("\x1B[2K\r");
 
-            // Final Output
+            // ═══════════════════════════════════════
+            // 🔥 FIX: selectMode logic
+            // ═══════════════════════════════════════
+            let finalValue: string;
+
+            if (this.config.selectMode) {
+              // SELECT MODE: Enter = pilih suggestion yang di-highlight
+              if (this.suggestions.length > 0) {
+                // Ada suggestions → return yang di-highlight
+                finalValue = this.suggestions[this.selectedIndex];
+              } else {
+                // Nggak ada suggestions → return teks mentah (custom input)
+                finalValue = this.input.trim();
+              }
+            } else {
+              // NORMAL MODE: Enter = konfirmasi teks (behavior lama)
+              finalValue = this.input;
+            }
+
             stdout.write(
-              `${chalk.cyan("? ")} ${chalk.bold(this.config.title)} ${chalk.green(this.input)}\n`,
+              `${chalk.cyan("? ")} ${chalk.bold(this.config.title)} ${chalk.green(finalValue)}\n`,
             );
 
             cleanup();
-            resolve(this.input);
+            resolve(finalValue);
             break;
           }
 
@@ -245,9 +265,6 @@ export class AutoComplete {
               const before = this.input.slice(0, this.tokenStart);
               const after = this.input.slice(this.tokenEnd);
 
-              // 🔥 UX IMPROVEMENT: Auto-Add Space
-              // Kalau suggestion yang dipilih bukan folder (nggak ada slash di akhir),
-              // tambahkan spasi otomatis biar user langsung gas ngetik kata selanjutnya.
               let insertion = selected;
               if (!insertion.endsWith("/") && !insertion.endsWith(" ")) {
                 insertion += " ";
@@ -311,6 +328,7 @@ export class AutoComplete {
                 this.input.slice(0, this.cursorPos - 1) +
                 this.input.slice(this.cursorPos);
               this.cursorPos--;
+              this.hasTyped = true;
               await this.refreshSuggestions();
               render();
             }
@@ -323,6 +341,7 @@ export class AutoComplete {
                 key.sequence +
                 this.input.slice(this.cursorPos);
               this.cursorPos++;
+              this.hasTyped = true;
               await this.refreshSuggestions();
               render();
             }

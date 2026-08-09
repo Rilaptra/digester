@@ -1,5 +1,45 @@
 # Changelog
 
+## [17.10.3-ai] - 2026-08-09
+- 🛠️ Refactor commit command logic to simplify target directory handling and remove redundant interactive release workflow generation
+- 📦 Upgrade Biome schema to version 2.5.2 and adjust dependency resolutions in `bun.lock`
+- 🧹 Clean up `prompter.config.json` by restructuring ignored patterns and file extensions
+- 📝 Update documentation and version numbers in `README.md` and `package.json`
+
+## [17.10.2-ai] - 2026-08-09
+- 🛠️ Refactor commit workflow logic and streamline error handling
+- 📦 Update Biome schema configuration and dependency versions
+- 🚀 Optimize execution flow for AI commit agent and target directory handling
+- 📝 Update documentation and feature breakdown in README.md
+
+## [17.10.1-ai] - 2026-08-09
+- 🛠️ Refactor configuration logic and update default prompter ignore patterns
+- 📦 Update Biome schema and lockfile dependencies for improved stability
+- 🚀 Optimize AI commit agent script execution flow and target handling
+- 🎨 Refresh documentation and feature breakdown in README.md
+
+## [17.10.0-ai] - 2026-08-09
+- ✨ Add interactive configuration editor in `src/commands/config.ts` with autocomplete support and custom path management
+- 🔓 Implement `forceInclude` logic in `Scanner` to allow bypassing ignored patterns and extensions for specific files or folders
+- 🛠️ Update `BaseCommand` with a robust `promptAutoComplete` method utilizing fuzzy and prefix matching
+- 📦 Upgrade Biome schema to `2.5.2` and update project dependency versions in `bun.lock`
+- 🎨 Refresh documentation, feature tables, and configuration guidelines in `README.md`
+
+## [17.9.0-ai] - 2026-08-09
+- ✨ Add interactive configuration editor in `src/commands/config.ts` with autocomplete support and custom path management
+- 🔓 Implement `forceInclude` logic in `Scanner` to allow bypassing ignored patterns and extensions for specific files or folders
+- 🛠️ Update `BaseCommand` with a robust `promptAutoComplete` method utilizing fuzzy and prefix matching
+- 📦 Upgrade Biome schema to `2.5.2` and update project dependency versions in `bun.lock`
+- 🎨 Refresh documentation, feature tables, and configuration guidelines in `README.md`
+
+## [17.8.0-ai] - 2026-08-09
+- ✨ Add interactive configuration editor in `src/commands/config.ts` with autocomplete support
+- 🔓 Implement `forceInclude` logic in `Scanner` to allow bypassing ignored patterns/extensions for specific files or folders
+- 🛠️ Update `BaseCommand` with a robust `promptAutoComplete` method utilizing fuzzy and prefix matching
+- 📦 Upgrade Biome schema to `2.5.2` and update project dependency versions in `bun.lock`
+- 🎨 Refresh documentation and feature tables in `README.md`
+
+
 ## [17.7.3-ai] - 2026-07-20
 - ⚙️ Update build timestamp in src/commands/index.ts to reflect current runtime
 - 📦 Increment internal version string to 17.7.5-ai in src/index.ts

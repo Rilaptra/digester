@@ -1,114 +1,235 @@
-/** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: Scanner is a static class> */
-import type { Dirent } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { extname, join, relative } from "node:path";
+import { basename, extname, join, relative } from "node:path";
 import type { AppConfig, ScanStats } from "../types/index.js";
 
 export class Scanner {
-  static async run(dir: string, cfg: AppConfig): Promise<ScanStats> {
-    const start = performance.now();
-    const stats: ScanStats = {
-      files: [],
-      tree: [],
-      skippedCount: 0,
-      skippedSize: 0,
-      totalSize: 0,
-      extStats: {},
-      duration: "",
+  /**
+   * Normalize config biar backward-compatible.
+   * Kalau config lama belum punya forceInclude, tambah default.
+   */
+  private static normalizeConfig(config: Partial<AppConfig>): AppConfig {
+    return {
+      ignoredPatterns: config.ignoredPatterns || new Set(),
+      ignoredExts: config.ignoredExts || new Set(),
+      maxFileSize: config.maxFileSize || 500,
+      forceInclude: config.forceInclude || new Set(), // ← FIX crash
+      prePushScripts: config.prePushScripts || [],
     };
-    await Scanner.walk(dir, dir, cfg, stats, "");
-    stats.duration = (performance.now() - start).toFixed(0);
-    return stats;
   }
 
-  static async walk(
-    base: string,
-    current: string,
-    cfg: AppConfig,
-    stats: ScanStats,
-    prefix: string,
-  ) {
-    let entries: Dirent[]; // 🟢 Fix 1: Explicit type definition
-    try {
-      entries = await readdir(current, { withFileTypes: true });
-    } catch {
-      return;
+  // ─── FORCE INCLUDE LOGIC ───
+
+  private static isForceIncluded(
+    fullPath: string,
+    rootDir: string,
+    forceInclude: Set<string>,
+  ): boolean {
+    if (!forceInclude || forceInclude.size === 0) return false; // ← defensive
+
+    const relPath = relative(rootDir, fullPath).replace(/\\/g, "/");
+
+    for (const pattern of forceInclude) {
+      const normalized = pattern.replace(/\\/g, "/");
+      if (relPath === normalized) return true;
+      if (relPath.startsWith(`${normalized}/`)) return true;
+      if (normalized.startsWith(`${relPath}/`)) return true;
     }
 
-    const valid = entries
-      .filter((e) => {
-        if (
-          e.name.startsWith(".") &&
-          e.name !== ".gitignore" &&
-          e.name !== ".env.example"
-        )
-          return false;
-        if (cfg.ignoredPatterns.has(e.name)) return false;
-        return true;
-      })
-      .sort((a, b) => {
-        // Optimization: logic simplified for readability & speed
-        if (a.isDirectory() === b.isDirectory()) {
-          return a.name.localeCompare(b.name);
+    return false;
+  }
+
+  // ─── IGNORED PATTERNS CHECK ───
+
+  /**
+   * Cek apakah path match ignoredPatterns.
+   * Support BAIK basename ("dist") MAUPUN relative path ("src/commands").
+   *
+   * 🔥 INI YANG SEBELUMNYA BUG:
+   *    Hanya cek basename → "src/commands" gak pernah match
+   */
+  private static isIgnoredPath(
+    fullPath: string,
+    rootDir: string,
+    ignoredPatterns: Set<string>,
+  ): boolean {
+    if (!ignoredPatterns || ignoredPatterns.size === 0) return false;
+
+    const relPath = relative(rootDir, fullPath).replace(/\\/g, "/");
+    const dirName = basename(fullPath);
+
+    for (const pattern of ignoredPatterns) {
+      const p = pattern.replace(/\\/g, "/");
+
+      // Match 1: Exact basename (e.g., pattern="dist", path="/project/dist")
+      if (dirName === p) return true;
+
+      // Match 2: Exact relative path (e.g., pattern="src/commands", relPath="src/commands")
+      if (relPath === p) return true;
+
+      // Match 3: Path is INSIDE an ignored directory
+      //   pattern="src/commands", relPath="src/commands/ansi.ts"
+      //   pattern="assets", relPath="assets/configs/db.json"
+      if (relPath.startsWith(`${p}/`)) return true;
+
+      // Match 4: Path contains pattern as a segment
+      //   pattern="node_modules", relPath="packages/app/node_modules"
+      if (relPath.includes(`/${p}/`)) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Cek apakah directory harus di-recurse.
+   *
+   * 🔥 FIX: Juga cek relative path, bukan cuma basename.
+   * Jadi "src/commands" di ignoredPatterns → folder commands di dalam src gak di-recurse.
+   */
+  private static shouldRecurseDir(
+    dirPath: string,
+    rootDir: string,
+    config: AppConfig,
+  ): boolean {
+    // Kalau force-include → selalu recurse
+    if (Scanner.isForceIncluded(dirPath, rootDir, config.forceInclude)) {
+      return true;
+    }
+
+    // Cek apakah dir ini di-ignore
+    if (Scanner.isIgnoredPath(dirPath, rootDir, config.ignoredPatterns)) {
+      // TAPI: kalau ada forceInclude child → tetap recurse
+      const relPath = relative(rootDir, dirPath).replace(/\\/g, "/");
+      for (const pattern of config.forceInclude) {
+        const normalized = pattern.replace(/\\/g, "/");
+        if (normalized.startsWith(`${relPath}/`) || normalized === relPath) {
+          return true;
         }
-        return a.isDirectory() ? -1 : 1;
-      });
+      }
+      return false;
+    }
 
-    // 🟢 Fix 2: Native for-loop (Memory efficient & solves TS2802)
-    const len = valid.length;
-    for (let i = 0; i < len; i++) {
-      const e = valid[i];
-      const isLast = i === len - 1;
-      const path = join(current, e.name);
+    return true;
+  }
 
-      // Tree Visualizer limit
-      if (stats.tree.length < 800) {
-        stats.tree.push(`${prefix}${isLast ? "└── " : "├── "}${e.name}`);
-      } else if (stats.tree.length === 800) {
-        stats.tree.push(`${prefix}   ... (truncated)`);
+  /**
+   * Cek apakah file harus di-include.
+   */
+  private static shouldIncludeFile(
+    filePath: string,
+    rootDir: string,
+    config: AppConfig,
+  ): { include: boolean; reason: string } {
+    const ext = extname(filePath);
+
+    // ✅ PRIORITY 1: forceInclude override semua
+    if (Scanner.isForceIncluded(filePath, rootDir, config.forceInclude)) {
+      return { include: true, reason: "force-include" };
+    }
+
+    // ❌ Check ignoredPatterns (basename + relative path)
+    if (Scanner.isIgnoredPath(filePath, rootDir, config.ignoredPatterns)) {
+      return { include: false, reason: "ignored-pattern" };
+    }
+
+    // ❌ Check ignoredExts
+    if (config.ignoredExts?.has(ext)) {
+      return { include: false, reason: "ignored-ext" };
+    }
+
+    return { include: true, reason: "default" };
+  }
+
+  // ─── MAIN SCAN ───
+
+  static async run(
+    rootDir: string,
+    rawConfig: Partial<AppConfig>,
+  ): Promise<ScanStats> {
+    // 🔥 NORMALIZE dulu — biar gak crash kalau property hilang
+    const config = Scanner.normalizeConfig(rawConfig);
+
+    const start = performance.now();
+    const files: ScanStats["files"] = [];
+    const tree: string[] = [];
+    let totalSize = 0;
+    let skippedCount = 0;
+    let skippedSize = 0;
+    let forceIncludedCount = 0;
+    const extStats: Record<string, { count: number; size: number }> = {};
+
+    const walk = async (dir: string, depth: number) => {
+      let entries;
+      try {
+        entries = await readdir(dir, { withFileTypes: true });
+      } catch {
+        return;
       }
 
-      if (e.isDirectory()) {
-        await Scanner.walk(
-          base,
-          path,
-          cfg,
-          stats,
-          prefix + (isLast ? "    " : "│   "),
-        );
-      } else {
-        const ext = extname(e.name).toLowerCase();
+      for (const entry of entries) {
+        const fullPath = join(dir, entry.name);
 
-        // Quick check before async stat (Save I/O)
-        if (cfg.ignoredExts.has(ext) || cfg.ignoredPatterns.has(e.name))
-          continue;
+        if (entry.isDirectory()) {
+          if (Scanner.shouldRecurseDir(fullPath, rootDir, config)) {
+            tree.push(`${"  ".repeat(depth)}├── ${entry.name}/`);
+            await walk(fullPath, depth + 1);
+          }
+        } else {
+          const relPath = relative(rootDir, fullPath);
+          const { include, reason } = Scanner.shouldIncludeFile(
+            fullPath,
+            rootDir,
+            config,
+          );
 
-        try {
-          const s = await stat(path);
-          if (s.size > cfg.maxFileSize) {
-            stats.skippedCount++;
-            stats.skippedSize += s.size;
+          if (!include) {
+            skippedCount++;
             continue;
           }
 
-          stats.files.push({
-            path,
-            relPath: relative(base, path),
-            size: s.size,
-            ext: ext.slice(1) || "txt",
-          });
+          let fileInfo;
+          try {
+            fileInfo = await stat(fullPath);
+          } catch {
+            skippedCount++;
+            continue;
+          }
 
-          stats.totalSize += s.size;
+          const sizeKB = fileInfo.size / 1024;
+          if (reason !== "force-include" && sizeKB > config.maxFileSize) {
+            skippedCount++;
+            skippedSize += fileInfo.size;
+            continue;
+          }
 
-          // Initialize if not exists (shorthand check)
-          if (!stats.extStats[ext]) stats.extStats[ext] = { count: 0, size: 0 };
+          const ext = extname(entry.name);
 
-          stats.extStats[ext].count++;
-          stats.extStats[ext].size += s.size;
-        } catch {
-          // Silent fail for locked/missing files
+          files.push({ path: fullPath, relPath, size: fileInfo.size, ext });
+          totalSize += fileInfo.size;
+
+          if (!extStats[ext]) extStats[ext] = { count: 0, size: 0 };
+          extStats[ext].count++;
+          extStats[ext].size += fileInfo.size;
+
+          if (reason === "force-include") forceIncludedCount++;
+
+          tree.push(`${"  ".repeat(depth)}├── ${entry.name}`);
         }
       }
-    }
+    };
+
+    await walk(rootDir, 0);
+
+    const duration = (performance.now() - start).toFixed(0);
+
+    return {
+      files,
+      tree,
+      skippedCount,
+      skippedSize,
+      totalSize,
+      forceIncludedCount,
+      extStats,
+      duration: `${duration}ms`,
+    };
   }
 }

@@ -12,12 +12,14 @@ export class CheckCommand extends BaseCommand {
   public aliases = ["ck"];
 
   public async execute(args: string[]): Promise<void> {
-    const isThis = args[0] === "this";
-    const targetDir = isThis ? process.cwd() : SYSTEM.ROOT_DIR;
-    const modeLabel = isThis ? "CURRENT DIR" : "SELF-UPDATE";
+    // 🔥 FIX 1: Default selalu CWD
+    const isSelf = args[0] === "self";
+    const targetDir = isSelf ? SYSTEM.ROOT_DIR : process.cwd();
+    const modeLabel = isSelf ? "SELF-UPDATE" : "CURRENT DIR";
 
     this.createBox(`🔍 SECRET SCANNER (${modeLabel})`);
 
+    // ... sisa code di bawahnya tetep sama
     if (!GitManager.isRepo(targetDir)) {
       this.error("❌ Not a Git repository.");
       process.exit(1);

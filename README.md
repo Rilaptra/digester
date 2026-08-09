@@ -1,153 +1,250 @@
-# ⚡ DIGESTER
+# 🤖 Digester CLI
 
+![Version](https://img.shields.io/badge/Version-17.10.0--ai-blue?style=for-the-badge)
 
-<div align="center">
+> The Ultimate Codebase Digester + AI Ops Agent
 
-```text
-░███████   ░██                                    ░██                       
-░██   ░██                                         ░██                       
-░██    ░██ ░██ ░████████  ░███████   ░███████  ░████████  ░███████  ░██░████
-░██    ░██ ░██░██    ░██ ░██    ░██ ░██           ░██    ░██    ░██ ░███    
-░██    ░██ ░██░██    ░██ ░█████████  ░███████     ░██    ░█████████ ░██     
-░██   ░██  ░██░██   ░███ ░██               ░██    ░██    ░██        ░██     
-░███████   ░██ ░█████░██  ░███████   ░███████      ░████  ░███████  ░██     
-                     ░██                                                    
-               ░███████                                                     
-```
+![Runtime](https://img.shields.io/badge/runtime-Bun-black?logo=bun)
+![Language](https://img.shields.io/badge/language-TypeScript-blue?logo=typescript)
+![Linter](https://img.shields.io/badge/linter-Biome-green)
 
-![Version](https://img.shields.io/badge/Version-17.7.3--ai-blue?style=for-the-badge&logo=git)
-![Runtime](https://img.shields.io/badge/Runtime-Bun_v1.2+-black?logo=bun&style=for-the-badge)
-![Security](https://img.shields.io/badge/Security-Secret_Scan-red?style=for-the-badge&logo=shield)
-![Build](https://img.shields.io/badge/Build-Native_Binary-green?style=for-the-badge)
+**Digester** adalah CLI tool serbaguna yang menggabungkan analisis codebase, AI-powered git operations, dan developer workflow automation dalam satu alat.
 
-> **The Ultimate AI Operations Agent & Codebase Context Engine.**
-> Built for speed on low-end hardware. Zero dependencies bloat. 100% Bun Native.
-
-**Digester** is not just a context generator. It is a highly optimized CLI toolkit that turns your codebase into a liquid format for LLMs, automates your Git workflows with AI, traces dependencies, and protects your secrets—all running on a toaster-friendly memory footprint.
-
-</div>
+Dibuat oleh **Rilaptra**
 
 ---
 
-## 🌟 Why Digester?
+## 🚀 Fitur Utama
 
-- **⚡ Blazingly Fast:** Powered by Bun, scanning thousands of files in milliseconds.
-- **🎨 Custom TUI Engine:** No heavy prompt libraries. Built-in, zero-allocation UI components (Grid Select, Editors, Spinners).
-- **🛡️ Security Guard:** AI scans your staged changes for leaked secrets (API Keys, tokens) _before_ you commit.
-- **🧠 Dependency Tracing:** Recursively maps out imports from an entry point to create a focused context graph.
-- **🌍 Remote Ops:** Clone, scan, and digest remote GitHub repositories in temporary sandboxes without polluting your disk.
-
----
-
-## 🚀 Key Features
-
-### 1. 🤖 AI Auto-Ops Agent
-
-Stop writing commit messages manually.
-
-- **Auto-Commit:** Analyzes `git diff`, writes Conventional Commits, and generates a bullet-point Changelog.
-- **Auto-Version:** Smart SemVer bumping (Major/Minor/Patch) based on code analysis.
-- **Pre-Push Hooks:** Runs configured scripts or TS files before pushing to ensure quality.
-
-### 2. 🗺️ Code Cartography
-
-Understand your project instantly.
-
-- **`digest tree`:** Visualize your project structure with smart file-type icons.
-- **`digest trace`:** Generate a markdown digest _only_ for files related to a specific entry point (e.g., `src/index.ts`).
-- **`digest git`:** Digest a remote repo URL directly (e.g., `digest git user/repo`).
-
-### 3. 🛠️ Developer Experience (DX)
-
-- **Auto-Build Watcher:** `digest autobuild` watches changes and recompiles with audio feedback.
-- **Scaffolder:** `digest gen` creates new Commands or Managers instantly.
-- **Self-Healing:** `digest update` pulls the latest version of itself and rebuilds locally.
+| Kategori | Fitur | Perintah |
+|---|---|---|
+| 🔍 Scanning | Scan & digest codebase lokal | `digest scan` |
+| 🌐 Remote | Clone & digest remote git repo | `digest git <url>` |
+| 🤖 AI Commit | Auto-commit, changelog, version bump | `digest commit` |
+| 🛡️ Security | Deteksi secret leak di staged changes | `digest check` |
+| ⚡ Auto-Build | Watch & rebuild otomatis | `digest autobuild` |
+| 🏗️ Scaffold | Buat Command/Manager baru | `digest gen` |
+| 🎨 ANSI Art | Generate ANSI gradient art | `digest ansi` |
+| 📦 Self-Update | Update CLI ke versi terbaru | `digest update` |
+| 🔑 Config | Set API key & model AI | `digest set-key`, `digest set-model` |
+| 🌳 Dependency | Trace & tree dependency graph | `digest trace`, `digest tree` |
 
 ---
 
-## 📥 Installation
-
-Digester is optimized for **Bun**. Ensure you have it installed.
-
-### Option A: From Source (Recommended)
+## 📦 Instalasi
 
 ```bash
-# 1. Clone
-git clone https://github.com/Rilaptra/digester.git
+# Clone repo
+git clone https://github.com/rizlaptra/digester.git
 cd digester
 
-# 2. Install Deps
+# Install dependencies
 bun install
 
-# 3. Build & Setup (Adds to PATH)
-bun run setup
+# Build binary
+bun run build
 ```
 
-### Option B: Quick Start (Dev Mode)
+## ⚙️ Setup Awal
 
 ```bash
-bun install
-bun run dev
+# Set API Key (Gemini/OpenAI)
+digest set-key <YOUR_API_KEY>
+
+# Pilih AI Model
+digest set-model
+
+# Atau gunakan setup interaktif
+digest setup
+```
+
+## 📖 Perintah Lengkap
+
+| Perintah | Alias | Deskripsi |
+|---|---|---|
+| `scan` | `s` | Scan & digest codebase lokal ke Markdown |
+| `git <url>` | `clone`, `remote` | Clone & digest remote git repository |
+| `commit` | `ci` | AI auto-commit dengan changelog & version bump |
+| `check` | `ck` | Scan secret leak di staged changes |
+| `autobuild` | `dev`, `watch`, `live` | Watch file changes & auto-rebuild |
+| `gen` | `create`, `scaffold`, `new` | Scaffold Command/Manager baru |
+| `config` | `init` | Generate file konfigurasi default |
+| `help` | `h`, `-h`, `--help` | Tampilkan informasi bantuan |
+| `ansi` | `art`, `gradient` | Generate ANSI gradient art file |
+| `tree` | — | Tampilkan dependency tree |
+| `trace` | — | Trace dependency antar file |
+| `src` | — | Lihat source code perintah |
+| `open` | — | Buka file/directory |
+| `set-key <key>` | — | Set API key untuk AI |
+| `set-model` | — | Set/pilih AI model |
+| `set` | — | Set konfigurasi |
+| `hard-restart` | `restart`, `rb`, `f5` | Force rebuild & restart |
+| `update` | — | Update CLI ke versi terbaru |
+| `test` | — | Jalankan test |
+
+---
+
+## 🏗️ Arsitektur
+
+```
+src/
+├── index.ts                  # Entry point
+├── commands/                 # Semua perintah CLI (auto-registered)
+│   ├── index.ts              # ⚠️ AUTO-GENERATED (jangan edit manual)
+│   ├── scan.ts               # Scan codebase lokal
+│   ├── git.ts                # Clone & digest remote repo
+│   ├── commit.ts             # AI auto-commit agent
+│   ├── check.ts              # Secret leak scanner
+│   ├── autobuild.ts          # Auto-rebuild watcher
+│   ├── gen.ts                # Code scaffolder
+│   └── ...                   # Perintah lainnya
+├── core/
+│   ├── AppController.ts      # Controller utama aplikasi
+│   ├── BaseCommand.ts        # Base class untuk semua perintah
+│   ├── CommandLoader.ts      # Dynamic command loader/registry
+│   ├── DependencyTracer.ts   # Dependency graph tracer
+│   └── Scanner.ts            # Core file scanner & digester
+├── managers/
+│   ├── AIManager.ts          # AI integration (Gemini/OpenAI)
+│   ├── ConfigManager.ts      # Konfigurasi manager
+│   ├── GitManager.ts         # Git operations manager
+│   └── SystemManager.ts      # System-level operations
+├── constants/
+│   └── defaults.ts           # Default config & system constants
+├── types/
+│   └── index.ts              # Type definitions
+└── utils/
+    ├── tui/                  # Terminal UI components
+    │   ├── AutoComplete.ts   # Auto-complete input
+    │   ├── Confirm.ts        # Yes/No prompt
+    │   ├── Editor.ts         # Editor integration
+    │   ├── MultiSelect.ts    # Multi-select menu
+    │   ├── Select.ts         # Single select menu
+    │   ├── SpinNumber.ts     # Number spinner
+    │   ├── TextPrompt.ts     # Text input prompt
+    │   └── TreeSelect.ts     # Tree selection
+    ├── explorer.ts           # File explorer
+    ├── filesystem.ts         # File system utilities
+    ├── formatting.ts         # Text formatting utilities
+    ├── logger.ts             # Logging system
+    └── index.ts              # Utils barrel export
+```
+
+## 🔄 Alur Command Registry (Codegen)
+
+```
+scripts/generate-registry.ts
+        │
+        ▼
+  Scan src/commands/*.ts
+        │
+        ▼
+  Filter & Sort alphabetically
+        │
+        ▼
+  Generate src/commands/index.ts
+  (export * from "./scan.js")
+  (export * from "./commit.js")
+  ...
+```
+
+Jalankan dengan: `bun run codegen`
+
+---
+
+## 🤖 Alur AI Commit Agent
+
+```
+User: digest commit
+        │
+        ▼
+  ┌─ Cek Git Repo ────── Tidak? ──► Init Git (interaktif)
+  │
+  ├─ Cek Remote ──────── Tidak? ──► Add Remote (interaktif)
+  │
+  ├─ Cek Release Workflow ─ Tidak? ─► Pilih: Standard / Binary Build
+  │
+  ├─ Cek API Key ──────── Tidak? ──► Error: set-key dulu
+  │
+  ├─ Git Add + Diff ───── Kosong? ──► "No changes to commit"
+  │
+  ├─ AI Generate ──────────────────────────────────┐
+  │   (commit message, changelog, version bump,   │
+  │    security check)                             │
+  │                                                │
+  ├─ Security Check ──── Leak? ──► Warning + Confirm
+  │                                                │
+  ├─ User Confirm ─────── No? ───► Aborted         │
+  │                                                │
+  ├─ Update Version (package.json)                 │
+  ├─ Update CHANGELOG.md                           │
+  ├─ Update README.md (version + command table)    │
+  │                                                │
+  ├─ Pre-Push Pipeline ────────────────────────────┘
+  │   (run scripts/TS files before push)
+  │
+  ├─ Git Commit + Tag
+  │
+  └─ Push Strategy ──────► Direct / PR Branch / Skip
 ```
 
 ---
 
-## 🎮 Command Reference
+## 🔧 Konfigurasi
 
-| Command            | Alias     | Description                                                |
-| :----------------- | :-------- | :--------------------------------------------------------- |
-| `digest scan`      | `.`       | Scan current directory and generate context.               |
-| `digest commit`    | `ci`      | **AI Agent:** Auto-commit, version bump, changelog, push.  |
-| `digest check`     | `ck`      | Scan staged changes for secret leaks/security risks.       |
-| `digest git`       | `clone`   | Clone & digest a remote Git repository (URL or user/repo). |
-| `digest trace`     | `deps`    | Trace dependencies recursively from an entry file.         |
-| `digest tree`      | `t`       | Display project structure with icons & stats.              |
-| `digest source`    | `src`     | Self-digest: Scan the Digester source code itself.         |
-| `digest gen`       | `new`     | Scaffold new Commands or Managers.                         |
-| `digest config`    | `init`    | Generate default `prompter.config.json`.                   |
-| `digest autobuild` | `dev`     | Watch mode with auto-recompile & sound alerts.             |
-| `digest update`    | `upgrade` | Self-update Digester from the repo.                        |
-| `digest set-key`   | `auth`    | Set your Google Gemini API Key.                            |
-| `digest set-model` | `model`   | Switch AI Models (Flash/Pro).                              |
-
----
-
-## ⚙️ Configuration
-
-Customize behavior via `prompter.config.json`:
+File: `prompter.config.json`
 
 ```json
 {
-  "ignoredPatterns": ["node_modules", "dist", ".git", ".next"],
-  "ignoredExts": [".png", ".jpg", ".lock", ".tsbuildinfo"],
-  "maxFileSizeKB": 500,
-  "prePushScripts": ["lint", "test"]
+  "prePushScripts": [],
+  ...
 }
+```
+
+Generate default: `digest config`
+
+---
+
+## 🛠️ Development
+
+```bash
+# Mode development (watch + auto-rebuild)
+bun run dev
+# atau
+digest autobuild
+
+# Generate command registry
+bun run codegen
+
+# Scaffold command baru
+digest gen
+
+# Hard restart/rebuild
+digest hard-restart
+
+# Lint
+bunx biome check src/
 ```
 
 ---
 
-## 🛡️ Architecture & Stack
+## 📄 Output
 
-Designed for **Resilience** and **Performance**.
+Hasil scan/digest disimpan di folder `generated/` dalam format Markdown:
 
-- **Runtime:** [Bun](https://bun.sh) (Native Spawn, IO, SQLite)
-- **Language:** TypeScript 5.0 (Strict)
-- **Architecture:**
-  - **Core:** `Scanner`, `DependencyTracer`, `CommandLoader`
-  - **Managers:** `AIManager` (Gemini), `GitManager`, `ConfigManager`
-  - **Utils:** Zero-alloc Logger, Custom TUI System
-- **Linter/Formatter:** Biome
+- **Lokal**: `DIGEST_<timestamp>.md`
+- **Remote**: `DIGEST_REMOTE_<repo>_<timestamp>.md`
 
----
-
-## 👤 Author
-
-**(Rilaptra)**
-
-- 🌐 [Eryzsh Dashboard](https://erzysh.vercel.app)
-- 🐙 [GitHub](https://github.com/Rilaptra)
+Format output berisi:
+1. **Structure** — Tree view direktori
+2. **Code Content** — Semua source code dengan path label
 
 ---
 
-> _"Code by Human, Optimized by Logic, Powered by AI."_ ⚡
+## 📝 Changelog
+
+Lihat [CHANGELOG.md](./CHANGELOG.md)
+
+## 📜 License
+
+MIT

@@ -2,6 +2,7 @@ export interface AppConfig {
   ignoredPatterns: Set<string>;
   ignoredExts: Set<string>;
   maxFileSize: number;
+  forceInclude: Set<string>; // ← BARU
   prePushScripts?: string[];
 }
 
@@ -11,6 +12,7 @@ export interface ScanStats {
   skippedCount: number;
   skippedSize: number;
   totalSize: number;
+  forceIncludedCount: number; // ← BARU
   extStats: Record<string, { count: number; size: number }>;
   duration: string;
 }
