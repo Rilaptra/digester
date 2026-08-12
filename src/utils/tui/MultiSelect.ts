@@ -1,5 +1,6 @@
 // --- src/utils/tui/MultiSelect.ts ---
 /** biome-ignore-all lint/suspicious/noControlCharactersInRegex: <explanation:  is a control character> */
+
 import { emitKeypressEvents } from "node:readline";
 import chalk from "chalk";
 
@@ -194,10 +195,9 @@ export class MultiSelect<ValueType = string> {
       stdout.write(`${titleStr}${selectionInfo}\x1B[K\n`);
 
       // 4. Calculate Column Width Dynamically
-      // Cari label terpanjang
-      const maxLabelLen = Math.max(...this.options.map((o) => o.label.length));
-      // Base width = Pointer(2) + Icon(2) + Spasi(1) + Label + Padding(2)
-      // Kita set minimum width biar ga mepet banget
+      const maxLabelLen = Math.max(
+        ...this.options.map((o) => Bun.stringWidth(o.label)),
+      );
       const colWidth = maxLabelLen + 7;
 
       // 5. Render Viewport Loops
@@ -240,10 +240,8 @@ export class MultiSelect<ValueType = string> {
             // Hitung panjang string asli (tanpa kode warna) untuk padding
             // Pointer(2) + Icon(1/2) + Space(1) + Label
             // Kita pakai string raw dari pointer+iconStr+space+label untuk hitung length
-            const rawStringCheck = `  ${iconStr} ${opt.label}`;
-            // Note: Kita pake 2 spasi buat simulasi pointer length
-
-            const currentLen = rawStringCheck.length;
+            const currentLen =
+              2 + Bun.stringWidth(iconStr) + 1 + Bun.stringWidth(opt.label);
             const paddingNeeded = Math.max(1, colWidth - currentLen);
             const padding = " ".repeat(paddingNeeded);
 

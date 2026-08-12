@@ -4,8 +4,8 @@
 import { join } from "node:path";
 import Boxen from "boxen";
 import chalk from "chalk";
-import Table from "cli-table3";
 import { SYSTEM } from "../constants/defaults.js";
+import { padEndVisual } from "../utils/formatting.js"; // Import helper baru
 import { generateLog } from "../utils/logger.js";
 
 // --- TYPES ---
@@ -242,23 +242,16 @@ export class SystemManager {
     }
   }
 
-  /**
-   * Renders the update report to the console.
-   * Displays critical CLI update banners, runtime warnings, and a table for dependency updates.
-   * @private
-   * @param updates - An array of PackageCheck objects containing update information.
-   */
-  private static renderReport(updates: PackageCheck[]) {
-    // Spacer
-    generateLog({ type: "info", raw: true }, "");
+  // ... (di dalam class SystemManager) ...
 
+  private static renderReport(updates: PackageCheck[]) {
+    generateLog({ type: "info", raw: true }, "");
     const cli = updates.find((u) => u.type === "cli");
     const runtime = updates.find((u) => u.type === "runtime");
     const deps = updates
       .filter((u) => u.type.includes("dependency"))
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    // 1. CRITICAL BANNER (Digester Update)
     if (cli) {
       generateLog(
         { type: "info", raw: true },
@@ -285,14 +278,12 @@ export class SystemManager {
       generateLog({ type: "info", raw: true }, "");
     }
 
-    // 2. RUNTIME WARNING (Bun Update)
     if (runtime) {
-      const platform = `${process.platform}-${process.arch}`;
       generateLog(
         { type: "warn", raw: true },
         chalk.bgYellow.black.bold(" BUN UPDATE ") +
           chalk.yellow(` v${runtime.current} ➜ v${runtime.latest} `) +
-          chalk.dim(`[${platform}]`),
+          chalk.dim(`[${process.platform}-${process.arch}]`),
       );
       generateLog(
         { type: "info", raw: true },
@@ -300,51 +291,64 @@ export class SystemManager {
       );
     }
 
-    // 3. DEPENDENCY TABLE
     if (deps.length > 0) {
-      const table = new Table({
-        head: [
-          chalk.bold.cyan("Package"),
-          chalk.bold.cyan("Type"),
-          chalk.bold.cyan("Current"),
-          chalk.bold.cyan("Latest"),
-        ],
-        style: { head: [], border: [] },
-        chars: {
-          top: "─",
-          "top-mid": "┬",
-          "top-left": "┌",
-          "top-right": "┐",
-          bottom: "─",
-          "bottom-mid": "┴",
-          "bottom-left": "└",
-          "bottom-right": "┘",
-          left: "│",
-          "left-mid": "├",
-          mid: "─",
-          "mid-mid": "┼",
-          right: "│",
-          "right-mid": "┤",
-          middle: "│",
-        },
-      });
+      // 🔥 NATIVE BUN TABLE RENDERER
+      const headers = ["Package", "Type", "Current", "Latest"];
+      const colWidths = [25, 10, 15, 15];
 
-      const limit = 5;
+      const drawLine = (
+        cols: string[],
+        chars: { l: string; m: string; r: string; c: string },
+      ) => {
+        return (
+          chars.l +
+          cols
+            .map((c, i) => padEndVisual(c, colWidths[i], chars.c))
+            .join(chars.m) +
+          chars.r
+        );
+      };
 
-      deps.slice(0, limit).forEach((u) => {
-        table.push([
-          chalk.white(u.name),
-          u.type === "dependency" ? chalk.green("prod") : chalk.dim("dev"),
-          chalk.red(u.current),
-          chalk.green.bold(u.latest),
-        ]);
-      });
+      const topBorder = drawLine(
+        colWidths.map((w) => "─".repeat(w)),
+        { l: "┌", m: "┬", r: "┐", c: "─" },
+      );
+      const headerRow = drawLine(
+        headers.map((h) => chalk.bold.cyan(h)),
+        { l: "│", m: "│", r: "│", c: " " },
+      );
+      const midBorder = drawLine(
+        colWidths.map((w) => "─".repeat(w)),
+        { l: "├", m: "┼", r: "┤", c: "─" },
+      );
+      const botBorder = drawLine(
+        colWidths.map((w) => "─".repeat(w)),
+        { l: "└", m: "┴", r: "┘", c: "─" },
+      );
 
       generateLog(
         { type: "info", raw: true },
         chalk.bold.white(`📦 Project Dependencies (${deps.length} outdated):`),
       );
-      generateLog({ type: "info", raw: true }, table.toString());
+      generateLog({ type: "info", raw: true }, topBorder);
+      generateLog({ type: "info", raw: true }, headerRow);
+      generateLog({ type: "info", raw: true }, midBorder);
+
+      const limit = 5;
+      deps.slice(0, limit).forEach((u) => {
+        const row = [
+          chalk.white(u.name),
+          u.type === "dependency" ? chalk.green("prod") : chalk.dim("dev"),
+          chalk.red(u.current),
+          chalk.green.bold(u.latest),
+        ];
+        generateLog(
+          { type: "info", raw: true },
+          drawLine(row, { l: "│", m: "│", r: "│", c: " " }),
+        );
+      });
+
+      generateLog({ type: "info", raw: true }, botBorder);
 
       if (deps.length > limit) {
         generateLog(
@@ -352,7 +356,6 @@ export class SystemManager {
           chalk.dim(`   ... and ${deps.length - limit} more.`),
         );
       }
-
       generateLog(
         { type: "info", raw: true },
         chalk.dim("   Run 'bun update' to fix.\n"),

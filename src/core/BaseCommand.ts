@@ -4,6 +4,10 @@ import Table from "cli-table3";
 import ora, { type Ora } from "ora";
 import * as Utils from "../utils/index.js";
 import { generateLog } from "../utils/logger.js";
+import {
+  CommandPalette,
+  type PaletteItem,
+} from "../utils/tui/CommandPalette.js";
 import type { CommandLoader } from "./CommandLoader.js";
 
 /**
@@ -258,6 +262,13 @@ export abstract class BaseCommand {
     }
 
     return result;
+  }
+
+  protected async promptPalette(
+    title: string,
+    items: PaletteItem[],
+  ): Promise<string | null> {
+    return new CommandPalette(title, items).run();
   }
 
   /**

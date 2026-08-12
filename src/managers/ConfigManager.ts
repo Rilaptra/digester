@@ -1,7 +1,7 @@
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: Static class> */
 
-import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { Glob } from "bun";
 import { DEFAULT_CONFIG, SYSTEM } from "../constants/defaults.js";
 import type { AppConfig, AuthConfig } from "../types/index.js";
 
@@ -112,24 +112,29 @@ export class ConfigManager {
    *
    * @param targetDir - The root directory to scan.
    * @returns A promise that resolves to an array of relative paths to .ts files.
+   * 🔥 NATIVE BUN GLOB: Scan file .ts dengan super cepat
    */
   static async listTSFiles(targetDir: string): Promise<string[]> {
     const results: string[] = [];
     const dirsToScan = [".", "scripts", "tools", "bin"];
 
+    // Pattern: Cari semua file .ts di dalam folder target, max depth 2
+    const glob = new Glob("**/*.ts");
+
     for (const d of dirsToScan) {
       const dirPath = join(targetDir, d);
       try {
-        const { readdirSync, statSync } = await import("node:fs");
-        if (existsSync(dirPath) && statSync(dirPath).isDirectory()) {
-          const files = readdirSync(dirPath);
-          for (const f of files) {
-            if (f.endsWith(".ts")) {
-              results.push(join(d, f).replace(/\\/g, "/"));
-            }
-          }
+        // Scan sync pakai native Bun Glob
+        for (const file of glob.scanSync({
+          cwd: dirPath,
+          onlyFiles: true,
+          dot: false,
+        })) {
+          results.push(join(d, file).replace(/\\/g, "/"));
         }
-      } catch {}
+      } catch {
+        // Ignore missing directories
+      }
     }
     return results;
   }

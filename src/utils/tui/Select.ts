@@ -1,4 +1,5 @@
 // --- src/utils/tui/Select.ts ---
+
 import { emitKeypressEvents } from "node:readline";
 import chalk from "chalk";
 
@@ -237,7 +238,10 @@ export class Select<ValueType = string> {
 
       stdout.write(`${titleStr}${progressStr}\x1B[K\n`);
 
-      const maxLabelLen = Math.max(...this.options.map((o) => o.label.length));
+      // 🔥 FIX: Pakai Bun.stringWidth
+      const maxLabelLen = Math.max(
+        ...this.options.map((o) => Bun.stringWidth(o.label)),
+      );
       const colWidth = maxLabelLen + 6;
 
       // 5. Render Viewport Rows
@@ -278,8 +282,8 @@ export class Select<ValueType = string> {
               }
 
               if (columns > 1) {
-                const rawLen = 2 + 2 + opt.label.length; // pointer + icon + label
-                // Padding biar grid rapi
+                // Hitung panjang visual tanpa kode ANSI
+                const rawLen = 2 + 2 + Bun.stringWidth(opt.label);
                 const padding = " ".repeat(Math.max(1, colWidth - rawLen));
                 content += padding;
               }

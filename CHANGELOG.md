@@ -1,5 +1,12 @@
 # Changelog
 
+## [17.12.0-ai] - 2026-08-12
+- ✨ Implement `CommandPalette` component for interactive CLI navigation and filtering
+- 🚀 Optimize string handling and terminal sizing using native `Bun.stringWidth` and `Bun.stripANSI`
+- 🛠️ Refactor `Scanner` and `ConfigManager` to utilize high-performance native `Bun.Glob` scanning
+- 📦 Replace external table-rendering library with an internal native Bun table layout renderer
+- 🎨 Update `SystemManager` and TUI selection utilities for improved visual padding and alignment
+
 ## [17.11.2-ai] - 2026-08-12
 - ⚡️ [Scanner] Optimize directory traversal and sorting to ensure consistent tree structure generation
 - 🎨 [SystemManager] Enhance CLI table styling with vibrant colors, borders, and sorted dependency updates

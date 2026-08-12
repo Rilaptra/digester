@@ -42,3 +42,47 @@ export function estimateTokens(bytes: number): string {
 export function styleLogTag(tag: string): string {
   return chalk.bgCyan.black(` ${tag} `);
 }
+
+/**
+ * 🔥 NATIVE BUN: Menghitung lebar visual string di terminal.
+ * Otomatis mengabaikan ANSI escape codes dan menghitung Emoji/Unicode dengan benar.
+ * Jauh lebih cepat (~6000x) daripada package `string-width`.
+ */
+export function visibleWidth(text: string): number {
+  if (!text) return 0;
+  return Bun.stringWidth(text, { countAnsiEscapeCodes: false });
+}
+
+/**
+ * 🔥 NATIVE BUN: Menghapus semua kode warna ANSI dari string.
+ */
+export function stripAnsi(text: string): string {
+  if (!text) return "";
+  return Bun.stripANSI(text);
+}
+
+/**
+ * Helper untuk padding string berdasarkan lebar visual, bukan length karakter.
+ */
+export function padEndVisual(
+  text: string,
+  targetWidth: number,
+  char = " ",
+): string {
+  const currentWidth = visibleWidth(text);
+  const diff = targetWidth - currentWidth;
+  if (diff <= 0) return text;
+  return text + char.repeat(diff);
+}
+
+export function truncateVisual(
+  text: string,
+  maxWidth: number,
+  ellipsis = "…",
+): string {
+  if (visibleWidth(text) <= maxWidth) return text;
+  // Fallback sederhana: strip ANSI, potong, kasih ellipsis (bisa di-improve kalau butuh ANSI-aware truncation)
+  const plain = stripAnsi(text);
+  if (plain.length <= maxWidth - 1) return plain + ellipsis;
+  return plain.slice(0, maxWidth - 1) + ellipsis;
+}
