@@ -1,5 +1,6 @@
 // src/managers/SystemManager.ts
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: Static class for system health checks and updates> */
+
 import { join } from "node:path";
 import Boxen from "boxen";
 import chalk from "chalk";
@@ -253,7 +254,9 @@ export class SystemManager {
 
     const cli = updates.find((u) => u.type === "cli");
     const runtime = updates.find((u) => u.type === "runtime");
-    const deps = updates.filter((u) => u.type.includes("dependency"));
+    const deps = updates
+      .filter((u) => u.type.includes("dependency"))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     // 1. CRITICAL BANNER (Digester Update)
     if (cli) {
@@ -264,7 +267,7 @@ export class SystemManager {
             chalk.dim(cli.current) +
             chalk.reset(" ➜ ") +
             chalk.green.bold(cli.latest) +
-            "\n\n" +
+            "\n" +
             chalk.cyan("Run: ") +
             chalk.white.bold("digest update") +
             chalk.cyan(" or ") +
@@ -301,31 +304,39 @@ export class SystemManager {
     if (deps.length > 0) {
       const table = new Table({
         head: [
-          chalk.bold("Pkg"),
-          chalk.bold("Type"),
-          chalk.bold("Curr"),
-          chalk.bold("Latest"),
+          chalk.bold.cyan("Package"),
+          chalk.bold.cyan("Type"),
+          chalk.bold.cyan("Current"),
+          chalk.bold.cyan("Latest"),
         ],
+        style: { head: [], border: [] },
         chars: {
-          mid: "",
-          "left-mid": "",
-          "mid-mid": "",
-          "right-mid": "",
-          top: "",
-          bottom: "",
-          left: "",
-          right: "",
+          top: "─",
+          "top-mid": "┬",
+          "top-left": "┌",
+          "top-right": "┐",
+          bottom: "─",
+          "bottom-mid": "┴",
+          "bottom-left": "└",
+          "bottom-right": "┘",
+          left: "│",
+          "left-mid": "├",
+          mid: "─",
+          "mid-mid": "┼",
+          right: "│",
+          "right-mid": "┤",
+          middle: "│",
         },
-        style: { "padding-left": 1, "padding-right": 1 },
       });
 
       const limit = 5;
+
       deps.slice(0, limit).forEach((u) => {
         table.push([
-          chalk.cyan(u.name),
-          u.type === "dependency" ? "prod" : chalk.dim("dev"),
+          chalk.white(u.name),
+          u.type === "dependency" ? chalk.green("prod") : chalk.dim("dev"),
           chalk.red(u.current),
-          chalk.green(u.latest),
+          chalk.green.bold(u.latest),
         ]);
       });
 
@@ -341,6 +352,7 @@ export class SystemManager {
           chalk.dim(`   ... and ${deps.length - limit} more.`),
         );
       }
+
       generateLog(
         { type: "info", raw: true },
         chalk.dim("   Run 'bun update' to fix.\n"),

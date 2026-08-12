@@ -1,5 +1,9 @@
 # Changelog
 
+## [17.11.2-ai] - 2026-08-12
+- ⚡️ [Scanner] Optimize directory traversal and sorting to ensure consistent tree structure generation
+- 🎨 [SystemManager] Enhance CLI table styling with vibrant colors, borders, and sorted dependency updates
+
 ## [17.11.1-ai] - 2026-08-09
 - 📝 Update README.md to reflect project rebranding from Digester CLI to digester
 - ✨ Add comprehensive feature capabilities list including AI auto-commit, secret scanner, and dependency tracer

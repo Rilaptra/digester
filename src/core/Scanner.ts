@@ -145,10 +145,9 @@ export class Scanner {
     rootDir: string,
     rawConfig: Partial<AppConfig>,
   ): Promise<ScanStats> {
-    // 🔥 NORMALIZE dulu — biar gak crash kalau property hilang
     const config = Scanner.normalizeConfig(rawConfig);
-
     const start = performance.now();
+
     const files: ScanStats["files"] = [];
     const tree: string[] = [];
     let totalSize = 0;
@@ -157,67 +156,117 @@ export class Scanner {
     let forceIncludedCount = 0;
     const extStats: Record<string, { count: number; size: number }> = {};
 
-    const walk = async (dir: string, depth: number) => {
-      let entries;
+    const walk = async (dir: string, prefix: string) => {
+      let entries: Array<{ name: string; isDirectory(): boolean }> = [];
+
       try {
         entries = await readdir(dir, { withFileTypes: true });
       } catch {
         return;
       }
 
+      // Sort biar tree konsisten dan enak dibaca
+      entries.sort((a, b) => a.name.localeCompare(b.name));
+
+      const visible: Array<{
+        name: string;
+        isDirectory: boolean;
+        fullPath: string;
+      }> = [];
+
       for (const entry of entries) {
         const fullPath = join(dir, entry.name);
 
         if (entry.isDirectory()) {
           if (Scanner.shouldRecurseDir(fullPath, rootDir, config)) {
-            tree.push(`${"  ".repeat(depth)}├── ${entry.name}/`);
-            await walk(fullPath, depth + 1);
+            visible.push({
+              name: entry.name,
+              isDirectory: true,
+              fullPath,
+            });
           }
+          continue;
+        }
+
+        const { include, reason } = Scanner.shouldIncludeFile(
+          fullPath,
+          rootDir,
+          config,
+        );
+
+        if (!include) {
+          skippedCount++;
+          continue;
+        }
+
+        let fileInfo: { size: number } | undefined;
+
+        try {
+          fileInfo = await stat(fullPath);
+        } catch {
+          skippedCount++;
+          continue;
+        }
+
+        if (!fileInfo) {
+          skippedCount++;
+          continue;
+        }
+
+        const sizeKB = fileInfo.size / 1024;
+
+        if (reason !== "force-include" && sizeKB > config.maxFileSize) {
+          skippedCount++;
+          skippedSize += fileInfo.size;
+          continue;
+        }
+
+        const ext = extname(entry.name);
+
+        files.push({
+          path: fullPath,
+          relPath: relative(rootDir, fullPath),
+          size: fileInfo.size,
+          ext,
+        });
+
+        totalSize += fileInfo.size;
+
+        if (!extStats[ext]) {
+          extStats[ext] = { count: 0, size: 0 };
+        }
+
+        extStats[ext].count++;
+        extStats[ext].size += fileInfo.size;
+
+        if (reason === "force-include") {
+          forceIncludedCount++;
+        }
+
+        visible.push({
+          name: entry.name,
+          isDirectory: false,
+          fullPath,
+        });
+      }
+
+      for (let i = 0; i < visible.length; i++) {
+        const item = visible[i];
+        const isLast = i === visible.length - 1;
+
+        const connector = isLast ? "└── " : "├── ";
+        const childPrefix = prefix + (isLast ? "    " : "│   ");
+
+        if (item.isDirectory) {
+          tree.push(`${prefix}${connector}${item.name}/`);
+          await walk(item.fullPath, childPrefix);
         } else {
-          const relPath = relative(rootDir, fullPath);
-          const { include, reason } = Scanner.shouldIncludeFile(
-            fullPath,
-            rootDir,
-            config,
-          );
-
-          if (!include) {
-            skippedCount++;
-            continue;
-          }
-
-          let fileInfo;
-          try {
-            fileInfo = await stat(fullPath);
-          } catch {
-            skippedCount++;
-            continue;
-          }
-
-          const sizeKB = fileInfo.size / 1024;
-          if (reason !== "force-include" && sizeKB > config.maxFileSize) {
-            skippedCount++;
-            skippedSize += fileInfo.size;
-            continue;
-          }
-
-          const ext = extname(entry.name);
-
-          files.push({ path: fullPath, relPath, size: fileInfo.size, ext });
-          totalSize += fileInfo.size;
-
-          if (!extStats[ext]) extStats[ext] = { count: 0, size: 0 };
-          extStats[ext].count++;
-          extStats[ext].size += fileInfo.size;
-
-          if (reason === "force-include") forceIncludedCount++;
-
-          tree.push(`${"  ".repeat(depth)}├── ${entry.name}`);
+          tree.push(`${prefix}${connector}${item.name}`);
         }
       }
     };
 
-    await walk(rootDir, 0);
+    await walk(rootDir, "");
 
     const duration = (performance.now() - start).toFixed(0);
 
