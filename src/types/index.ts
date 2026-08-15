@@ -33,3 +33,13 @@ export interface AICommitResponse {
   bump: "major" | "minor" | "patch" | "none";
   checkResult?: SecretCheckResult;
 }
+
+// ─── AI COPILOT TYPES ───
+export type TreeIgnoreMode = "gitignore" | "config" | "both" | "none";
+
+export interface AIDigestSuggestion {
+  suggestedIgnore: string[];
+  suggestedInclude: string[];
+  reasoning: string;
+  matchedPaths: string[];
+}

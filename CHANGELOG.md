@@ -1,5 +1,12 @@
 # Changelog
 
+## [17.13.0-ai] - 2026-08-15
+- 🤖 Implement AI Copilot flow to suggest digest configurations based on keyword search
+- 🛠️ Add Scanner.getCleanTree helper to generate clean relative file paths for AI analysis
+- 🧠 Add AIManager.suggestDigestConfig method to query Gemini and parse structured suggestions
+- 📦 Update types and configuration profiles to support tree ignore modes and digest suggestions
+- 🎨 Improve string width calculation for TUI text prompts using Bun.stringWidth
+
 ## [17.12.0-ai] - 2026-08-12
 - ✨ Implement `CommandPalette` component for interactive CLI navigation and filtering
 - 🚀 Optimize string handling and terminal sizing using native `Bun.stringWidth` and `Bun.stripANSI`

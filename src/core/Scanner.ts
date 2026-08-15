@@ -1,6 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
 import { basename, extname, join, relative } from "node:path";
-import type { AppConfig, ScanStats } from "../types/index.js";
+import { ConfigManager } from "../managers/ConfigManager.js"; // ← TAMBAH INI
+import type { AppConfig, ScanStats, TreeIgnoreMode } from "../types/index.js"; // ← Update type import
 
 export class Scanner {
   private static normalizeConfig(config: Partial<AppConfig>): AppConfig {
@@ -85,6 +86,56 @@ export class Scanner {
     if (config.ignoredExts?.has(ext))
       return { include: false, reason: "ignored-ext" };
     return { include: true, reason: "default" };
+  }
+
+  /**
+   * 🤖 AI COPILOT HELPER: Generate clean relative paths untuk AI
+   */
+  static async getCleanTree(
+    rootDir: string,
+    mode: TreeIgnoreMode,
+  ): Promise<string[]> {
+    let config: Partial<AppConfig> = {
+      ignoredPatterns: new Set(),
+      ignoredExts: new Set(),
+      maxFileSize: 500,
+      forceInclude: new Set(),
+    };
+
+    try {
+      if (mode === "gitignore") {
+        const gitignorePath = join(rootDir, ".gitignore");
+        if (await Bun.file(gitignorePath).exists()) {
+          const text = await Bun.file(gitignorePath).text();
+          const patterns = text
+            .split("\n")
+            .map((l) => l.trim())
+            .filter((l) => l && !l.startsWith("#") && !l.startsWith("!"))
+            .map((l) => l.replace(/^\/|\/$/g, ""));
+          config.ignoredPatterns = new Set(patterns);
+        }
+      } else if (mode === "config") {
+        const cfgPath = join(rootDir, "prompter.config.json");
+        if (await Bun.file(cfgPath).exists()) {
+          const raw = await Bun.file(cfgPath).json();
+          if (raw.ignoredPatterns)
+            config.ignoredPatterns = new Set(raw.ignoredPatterns);
+          if (raw.ignoredExts) config.ignoredExts = new Set(raw.ignoredExts);
+        }
+      } else if (mode === "both") {
+        config = await ConfigManager.load(rootDir);
+      }
+
+      const stats = await Scanner.run(rootDir, config);
+
+      // 🔥 FIX UTAMA: Kembalikan array of relative paths murni (tanpa icon/ANSI)
+      // Contoh: "src/app/api/ghost/route.ts"
+      return stats.files.map((f) => f.relPath.replace(/\\/g, "/"));
+    } catch (error) {
+      throw new Error(
+        `Scanner.getCleanTree failed: ${(error as Error).message}`,
+      );
+    }
   }
 
   static async run(

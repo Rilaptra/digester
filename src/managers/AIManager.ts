@@ -1,6 +1,10 @@
 // --- src/managers/AIManager.ts ---
 /** biome-ignore-all lint/complexity/noStaticOnlyClass: <explanation: AIManager is a static class> */
-import type { AICommitResponse, AuthConfig } from "../types/index.js";
+import type {
+  AICommitResponse,
+  AIDigestSuggestion,
+  AuthConfig,
+} from "../types/index.js";
 
 /**
  * Manages interactions with AI services (Google Generative AI).
@@ -43,6 +47,105 @@ export class AIManager {
         });
     } catch (e) {
       throw new Error(`Failed to fetch models: ${e}`);
+    }
+  }
+
+  /**
+   * 🤖 AI COPILOT: Minta saran config ke Gemini berdasarkan file tree
+   */
+  static async suggestDigestConfig(
+    fileTree: string[],
+    keyword: string,
+    auth: AuthConfig,
+  ): Promise<AIDigestSuggestion> {
+    if (!auth.apiKey)
+      throw new Error("API Key missing. Run 'digest set-key <KEY>' first.");
+    const model = auth.model || "gemini-1.5-flash";
+
+    // Limit tree size biar ga blowup token (max 2000 baris)
+
+    const prompt = `
+      You are a codebase context strategist.
+      Analyze this list of relative file paths and the user's keyword criteria.
+
+      USER KEYWORD: "${keyword}"
+
+      FILE PATHS LIST (JSON Array):
+      ${JSON.stringify(fileTree.slice(0, 2000))}
+
+      TASK:
+      1. Identify ALL paths from the list above that are related to "${keyword}".
+      2. Suggest which directory patterns to IGNORE to save tokens.
+      3. Provide a brief reasoning summary.
+
+      CRITICAL RULES:
+      - The "matchedPaths" array MUST contain EXACT strings copied from the FILE PATHS LIST above.
+      - Do NOT invent or hallucinate paths that are not in the list.
+      - If no paths match, return an empty array for "matchedPaths".
+
+      Return STRICT JSON ONLY:
+      {
+        "suggestedIgnore": ["array", "of", "directory/patterns"],
+        "reasoning": "explanation string",
+        "matchedPaths": ["exact/path/from/list.ts", "another/path.tsx"]
+      }
+    `;
+
+    try {
+      const isGemini = model.toLowerCase().includes("gemini");
+      const bodyPayload: {
+        contents: [{ parts: [{ text: string }] }];
+        generationConfig?: { responseMimeType: string };
+      } = {
+        contents: [{ parts: [{ text: prompt }] }],
+      };
+
+      if (isGemini) {
+        bodyPayload.generationConfig = { responseMimeType: "application/json" };
+      }
+
+      const res = await fetch(
+        `${AIManager.baseUrl}/models/${model}:generateContent?key=${auth.apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bodyPayload),
+        },
+      );
+
+      const data = (await res.json()) as {
+        candidates?: {
+          content?: {
+            parts?: {
+              text?: string;
+            }[];
+          };
+        }[];
+        error?: { message: string };
+      };
+
+      if (data.error)
+        throw new Error(`${data.error.message} (Model: ${model})`);
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error("Empty response from AI");
+
+      // Robust Markdown Stripping
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      const cleanJson = match ? match[1].trim() : text.trim();
+
+      const parsed = JSON.parse(cleanJson) as AIDigestSuggestion;
+
+      // Validasi struktur response
+      if (!parsed.matchedPaths || !Array.isArray(parsed.matchedPaths)) {
+        throw new Error("Invalid AI response format: missing matchedPaths");
+      }
+
+      return parsed;
+    } catch (e) {
+      throw new Error(
+        `AI Copilot failed: ${e instanceof Error ? e.message : e}`,
+      );
     }
   }
 

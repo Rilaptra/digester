@@ -91,8 +91,7 @@ export class TextPrompt {
 
       // 5. Position Cursor visually
       // Panjang: "? " (2) + Title + " › " (3) + cursorPos
-      // Note: Kita harus hitung panjang visual tanpa kode warna
-      const prefixLen = 2 + this.config.title.length + 3;
+      const prefixLen = 2 + Bun.stringWidth(this.config.title) + 3;
 
       // Kalau value kosong tapi ada placeholder, kursor tetap di 0
       const visualCursor = prefixLen + this.cursorPos;
