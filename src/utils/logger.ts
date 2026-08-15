@@ -74,11 +74,9 @@ export function generateLog(
 ): void;
 export function generateLog(
   options: Omit<LogOptions, "progress"> & { progress?: never },
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation: biome-ignore>
   ...message: any[]
 ): void;
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation: biome-ignore>
 export function generateLog(options: LogOptions, ...message: any[]) {
   const { type, eventName, system, progress, raw, noContext } = options;
 

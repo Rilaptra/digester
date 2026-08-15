@@ -44,18 +44,23 @@ export class ScanCommand extends BaseCommand {
       }
 
       if (mode.startsWith("Custom")) {
-        const input = await this.promptText(
-          chalk.yellow(
-            "👉 Enter paths (space separated, e.g. 'src/utils tests'): ",
-          ),
-        );
-        targetPaths = input
-          .split(" ")
-          .map((p) => p.trim())
-          .filter((p) => p.length > 0);
+        // 🔥 PAKAI TREESELECT MULTI-MODE
+        const tree = new UtilFunctions.TreeSelect({
+          title: "Select paths to scan:",
+          rootDir: process.cwd(),
+          multiSelect: true,
+        });
+        const result = await tree.run();
+
+        if (Array.isArray(result) && result.length > 0) {
+          // Convert absolute paths dari TreeSelect jadi relative path
+          targetPaths = result
+            .map((p) => relative(process.cwd(), p).replace(/\\/g, "/"))
+            .filter(Boolean);
+        }
 
         if (targetPaths.length === 0) {
-          this.warn("No paths entered. Defaulting to current directory.");
+          this.warn("No paths selected. Defaulting to current directory.");
           targetPaths = ["."];
         }
       } else {
@@ -403,9 +408,7 @@ export class ScanCommand extends BaseCommand {
 
       // 🛠️ Tree Visual Enhancement
       if (dirNameRelativeToRoot && dirNameRelativeToRoot !== "") {
-        aggregatedStats.tree.push(
-          chalk.bold.blue(`📂 ${dirNameRelativeToRoot}/`),
-        );
+        aggregatedStats.tree.push(`📂 ${dirNameRelativeToRoot}/`);
       }
       aggregatedStats.tree.push(...stats.tree);
 

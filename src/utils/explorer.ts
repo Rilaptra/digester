@@ -1,14 +1,17 @@
+// --- src/utils/explorer.ts ---
 import { TreeSelect } from "./tui/TreeSelect.js";
 
 export async function promptFileExplorer(
   _startDir: string = process.cwd(),
   rootDir: string = process.cwd(),
-): Promise<string | null> {
-  // Pake komponen baru yang keren
+  multiSelect: boolean = false,
+): Promise<string | string[] | null> {
   const tree = new TreeSelect({
-    title: "Select a file to digest:",
+    title: multiSelect
+      ? "Select paths (Space: Select, Enter: Confirm):"
+      : "Select a file to digest:",
     rootDir: rootDir,
-    // startDir logic bisa ditambahin di TreeSelect kalo mau jump to path
+    multiSelect: multiSelect,
   });
   return await tree.run();
 }

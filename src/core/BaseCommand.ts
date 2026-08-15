@@ -162,6 +162,20 @@ export abstract class BaseCommand {
   }
 
   /**
+   * Memulai Progress Bar
+   */
+  protected progress(config: Utils.ProgressBarConfig): Utils.ProgressBar {
+    return new Utils.ProgressBar(config);
+  }
+
+  /**
+   * Menampilkan Push Notification / Toast
+   */
+  protected async notify(config: Utils.ToastConfig | string): Promise<void> {
+    await Utils.Notification.show(config);
+  }
+
+  /**
    * Prompts the user with a Yes/No question.
    *
    * @param {string} question - The question to ask.

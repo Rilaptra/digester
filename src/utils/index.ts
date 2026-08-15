@@ -4,6 +4,8 @@ export * from "./logger.js";
 export * from "./tui/AutoComplete.js";
 export * from "./tui/Confirm.js";
 export * from "./tui/MultiSelect.js";
+export * from "./tui/Notification.js";
+export * from "./tui/ProgressBar.js";
 export * from "./tui/Select.js";
 export * from "./tui/TextPrompt.js";
 export * from "./tui/TreeSelect.js";

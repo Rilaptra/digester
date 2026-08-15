@@ -1,7 +1,7 @@
-import { readdir } from "node:fs/promises";
+// --- TreeSelect.ts ---
+import { readdirSync } from "node:fs";
 import { basename, join } from "node:path";
-import { emitKeypressEvents } from "node:readline";
-import chalk from "chalk";
+import { ANSI, c, type KeyPress, useInput, write } from "./core";
 
 interface TreeNode {
   name: string;
@@ -18,6 +18,7 @@ export interface TreeSelectConfig {
   rootDir?: string;
   maxDepth?: number;
   onlyDirectories?: boolean;
+  multiSelect?: boolean;
 }
 
 export class TreeSelect {
@@ -30,18 +31,22 @@ export class TreeSelect {
   private termHeight = process.stdout.rows || 20;
   private lastRenderHeight = 0;
 
+  private selectedPaths = new Set<string>();
+
   private icons = {
     dirOpen: "📂",
     dirClosed: "📁",
     file: "📄",
     cursor: "❯",
-    selected: "●",
+    checked: "☑",
+    unchecked: "☐",
   };
 
   constructor(config: TreeSelectConfig) {
     this.config = {
       rootDir: process.cwd(),
       maxDepth: 10,
+      multiSelect: false,
       ...config,
     };
 
@@ -54,13 +59,14 @@ export class TreeSelect {
     };
   }
 
-  private async expandNode(node: TreeNode) {
+  // Menggunakan Sync API untuk menghindari race condition render TUI
+  private expandNodeSync(node: TreeNode) {
     if (!node.isDirectory || node.children) {
       node.isExpanded = true;
       return;
     }
     try {
-      const entries = await readdir(node.path, { withFileTypes: true });
+      const entries = readdirSync(node.path, { withFileTypes: true });
       const sorted = entries.sort((a, b) => {
         if (a.isDirectory() === b.isDirectory())
           return a.name.localeCompare(b.name);
@@ -100,38 +106,35 @@ export class TreeSelect {
     this.flatList = list;
   }
 
-  public async run(): Promise<string | null> {
-    const { stdin, stdout } = process;
-
-    await this.expandNode(this.rootNode);
+  public async run(): Promise<string | string[] | null> {
+    this.expandNodeSync(this.rootNode);
     this.flattenTree();
     if (this.flatList.length > 1) this.cursorIndex = 1;
 
-    if (stdin.setRawMode) stdin.setRawMode(true);
-    stdin.resume();
-    emitKeypressEvents(stdin);
-    stdout.write("\x1B[?25l");
+    write(ANSI.HIDE_CURSOR);
 
     let isFirstRender = true;
 
     const render = () => {
+      this.termHeight = process.stdout.rows || 20;
+
       if (!isFirstRender) {
-        stdout.write(`\x1B[${this.lastRenderHeight}A`);
-        stdout.write("\x1B[0J");
+        write(`\x1B[${this.lastRenderHeight}A`);
+        write(ANSI.CLEAR_DOWN); // \x1B[J
       }
 
       const linesToRender: string[] = [];
 
-      // 🔥 FIX: Tambahin \r (Carriage Return) setelah \x1B[2K
-      // Ini maksa kursor mentok kiri sebelum nulis text.
-
       // HEADER
       linesToRender.push(
-        `\x1B[2K\r${chalk.cyan("? ")} ${chalk.bold(this.config.title)}`,
+        `\x1B[2K\r${c.cyan("? ")} ${c.bold(this.config.title)}`,
       );
-      linesToRender.push(
-        `\x1B[2K\r${chalk.dim("  Arrows to Move. Space to Select. Enter to Toggle.")}`,
-      );
+
+      let helpText = "  Arrows to Move. Space to Toggle. Enter to Confirm.";
+      if (!this.config.multiSelect) {
+        helpText = "  Arrows to Move. Space/Enter to Select. Right to Expand.";
+      }
+      linesToRender.push(`\x1B[2K\r${c.dim(helpText)}`);
 
       // BODY
       const maxBodyHeight = Math.max(5, this.termHeight - 5);
@@ -161,38 +164,43 @@ export class TreeSelect {
             : this.icons.dirClosed
           : this.icons.file;
 
-        let content = `${icon} ${node.name}`;
+        const isChecked =
+          this.config.multiSelect && this.selectedPaths.has(node.path);
+        const checkbox = this.config.multiSelect
+          ? `${isChecked ? c.green(this.icons.checked) : c.dim(this.icons.unchecked)} `
+          : "";
+
+        let content = `${checkbox}${icon} ${node.name}`;
         let prefix = "  ";
 
         if (isFocused) {
-          prefix = chalk.cyan(`${this.icons.cursor} `);
-          content = chalk.cyan.bold(content);
+          prefix = c.cyan(`${this.icons.cursor} `);
+          content = c.cyan(c.bold(content));
         } else {
-          content = chalk.white(content);
+          content = `${ANSI.RESET}${content}`;
         }
 
-        // 🔥 FIX: Tambahin \r di sini juga
         linesToRender.push(`\x1B[2K\r${indent}${prefix}${content}`);
       });
 
-      // Fill empty space
       const remainingLines = maxBodyHeight - visibleNodes.length;
       for (let i = 0; i < remainingLines; i++) {
-        linesToRender.push("\x1B[2K\r"); // 🔥 FIX
+        linesToRender.push("\x1B[2K\r");
       }
 
       // FOOTER
       const selectedNode = this.flatList[this.cursorIndex];
       let pathInfo = selectedNode ? selectedNode.path : "";
-      if (pathInfo.length > stdout.columns - 10) {
-        pathInfo = `...${pathInfo.slice(-(stdout.columns - 15))}`;
+      const maxPathLen = (process.stdout.columns || 80) - 10;
+
+      if (Bun.stringWidth(pathInfo) > maxPathLen) {
+        pathInfo = `...${pathInfo.slice(-(maxPathLen - 5))}`;
       }
 
-      linesToRender.push("\x1B[2K\r"); // 🔥 FIX: Spacer
-      linesToRender.push(`\x1B[2K\r${chalk.dim(`Path: ${pathInfo}`)}`); // 🔥 FIX
+      linesToRender.push("\x1B[2K\r");
+      linesToRender.push(`\x1B[2K\r${c.dim(`Path: ${pathInfo}`)}`);
 
-      const output = linesToRender.join("\n");
-      stdout.write(output);
+      write(linesToRender.join("\n"));
 
       this.lastRenderHeight = linesToRender.length;
       isFirstRender = false;
@@ -201,27 +209,20 @@ export class TreeSelect {
     render();
 
     return new Promise((resolve) => {
-      const cleanup = () => {
-        stdout.write(`\x1B[${this.lastRenderHeight}A`);
-        stdout.write("\x1B[0J");
-
-        stdout.write("\x1B[?25h\r");
-        if (stdin.setRawMode) stdin.setRawMode(false);
-        stdin.pause();
-        stdin.removeListener("keypress", handleKey);
-      };
-
-      const handleKey = async (
-        _: unknown,
-        key: { name: string; ctrl: boolean },
-      ) => {
+      const cleanup = useInput((key: KeyPress) => {
         if (key.ctrl && key.name === "c") {
           cleanup();
+          write(
+            `\x1B[${this.lastRenderHeight}A${ANSI.CLEAR_DOWN}${ANSI.SHOW_CURSOR}\r`,
+          );
           process.exit(0);
         }
 
         if (key.name === "escape") {
           cleanup();
+          write(
+            `\x1B[${this.lastRenderHeight}A${ANSI.CLEAR_DOWN}${ANSI.SHOW_CURSOR}\r`,
+          );
           resolve(null);
           return;
         }
@@ -244,26 +245,59 @@ export class TreeSelect {
             render();
             break;
 
-          // SELECT
-          case "space":
-            cleanup();
-            resolve(currentNode.path);
-            return;
+          case "space": {
+            if (this.config.multiSelect) {
+              if (currentNode) {
+                if (this.selectedPaths.has(currentNode.path)) {
+                  this.selectedPaths.delete(currentNode.path);
+                } else {
+                  this.selectedPaths.add(currentNode.path);
+                }
+              }
+              render();
+            } else {
+              cleanup();
+              write(
+                `\x1B[${this.lastRenderHeight}A${ANSI.CLEAR_DOWN}${ANSI.SHOW_CURSOR}\r`,
+              );
+              resolve(currentNode.path);
+            }
+            break;
+          }
 
-          // TOGGLE ONLY
           case "return":
-          case "enter":
-          case "right":
-          case "l":
+          case "enter": {
+            if (this.config.multiSelect) {
+              cleanup();
+              write(
+                `\x1B[${this.lastRenderHeight}A${ANSI.CLEAR_DOWN}${ANSI.SHOW_CURSOR}\r`,
+              );
+              resolve(Array.from(this.selectedPaths));
+              return;
+            }
+
             if (currentNode.isDirectory) {
               if (!currentNode.isExpanded) {
-                await this.expandNode(currentNode);
-              } else if (
-                currentNode.isExpanded &&
-                (key.name === "return" || key.name === "enter")
-              ) {
+                this.expandNodeSync(currentNode);
+              } else {
                 this.collapseNode(currentNode);
               }
+              this.flattenTree();
+              render();
+            } else {
+              cleanup();
+              write(
+                `\x1B[${this.lastRenderHeight}A${ANSI.CLEAR_DOWN}${ANSI.SHOW_CURSOR}\r`,
+              );
+              resolve(currentNode.path);
+            }
+            break;
+          }
+
+          case "right":
+          case "l":
+            if (currentNode.isDirectory && !currentNode.isExpanded) {
+              this.expandNodeSync(currentNode);
               this.flattenTree();
               render();
             }
@@ -284,9 +318,7 @@ export class TreeSelect {
             }
             break;
         }
-      };
-
-      stdin.on("keypress", handleKey);
+      });
     });
   }
 }

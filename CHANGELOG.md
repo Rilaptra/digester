@@ -1,5 +1,11 @@
 # Changelog
 
+## [17.14.0-ai] - 2026-08-15
+- 🚀 Integrate native TreeSelect component into the scan command for directory selection
+- ✨ Add comprehensive test suite script for validating all TUI components
+- 🛠️ Update prompter configuration rules and ignore lists
+- 📦 Refactor test command to focus on native OS notification stress testing
+
 ## [17.13.0-ai] - 2026-08-15
 - 🤖 Implement AI Copilot flow to suggest digest configurations based on keyword search
 - 🛠️ Add Scanner.getCleanTree helper to generate clean relative file paths for AI analysis
