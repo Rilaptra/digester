@@ -1,18 +1,21 @@
 // test.ts
 // Jalankan dengan: bun test.ts
 
-import { AutoComplete } from "./src/utils/tui/AutoComplete";
-import { CommandPalette } from "./src/utils/tui/CommandPalette";
-import { Confirm } from "./src/utils/tui/Confirm";
-import { c, write } from "./src/utils/tui/core";
-import { Editor } from "./src/utils/tui/Editor";
-import { MultiSelect } from "./src/utils/tui/MultiSelect";
-import { ToastBuilder } from "./src/utils/tui/Notification";
-import { ProgressBar } from "./src/utils/tui/ProgressBar";
-import { Select } from "./src/utils/tui/Select";
-import { SpinNumber } from "./src/utils/tui/SpinNumber";
-import { TextPrompt } from "./src/utils/tui/TextPrompt";
-import { TreeSelect } from "./src/utils/tui/TreeSelect";
+import {
+  AutoComplete,
+  CommandPalette,
+  Confirm,
+  Editor,
+  MultiSelect,
+  ProgressBar,
+  Select,
+  SpinNumber,
+  TextPrompt,
+  ToastBuilder,
+  TreeSelect,
+  c,
+  write,
+} from "@rilaptra/tui";
 
 async function main() {
   console.clear();

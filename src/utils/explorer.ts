@@ -1,5 +1,5 @@
 // --- src/utils/explorer.ts ---
-import { TreeSelect } from "./tui/TreeSelect.js";
+import { TreeSelect } from "@rilaptra/tui";
 
 export async function promptFileExplorer(
   _startDir: string = process.cwd(),
