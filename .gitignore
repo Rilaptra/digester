@@ -4,5 +4,6 @@ bin
 .env
 .DS_Store
 auth.config.json
-dist.zcode/
+dist
+.zcode/
 *.tsbuildinfo
