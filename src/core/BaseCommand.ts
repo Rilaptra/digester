@@ -1,8 +1,8 @@
+import { CommandPalette, type PaletteItem } from "@rilaptra/tui";
 import Boxen from "boxen";
 import chalk from "chalk";
 import Table from "cli-table3";
 import ora, { type Ora } from "ora";
-import { CommandPalette, type PaletteItem } from "@rilaptra/tui";
 import * as Utils from "../utils/index.js";
 import { generateLog } from "../utils/logger.js";
 import type { CommandLoader } from "./CommandLoader.js";

@@ -5,6 +5,7 @@ import {
   AutoComplete,
   CommandPalette,
   Confirm,
+  c,
   Editor,
   MultiSelect,
   ProgressBar,
@@ -13,7 +14,6 @@ import {
   TextPrompt,
   ToastBuilder,
   TreeSelect,
-  c,
   write,
 } from "@rilaptra/tui";
 

@@ -51,9 +51,9 @@ export class AIManager {
   }
 
   /**
-   * 🤖 AI COPILOT: Minta saran config ke Gemini berdasarkan file tree
+   * 🤖 AI COPILOT v2: AI cuma milih FILE. Nggak nyentuh config apa pun.
    */
-  static async suggestDigestConfig(
+  static async suggestDigestFiles(
     fileTree: string[],
     keyword: string,
     auth: AuthConfig,
@@ -62,43 +62,40 @@ export class AIManager {
       throw new Error("API Key missing. Run 'digest set-key <KEY>' first.");
     const model = auth.model || "gemini-1.5-flash";
 
-    // Limit tree size biar ga blowup token (max 2000 baris)
-
     const prompt = `
-      You are a codebase context strategist.
-      Analyze this list of relative file paths and the user's keyword criteria.
+    You are a precise FILE SELECTOR for a code digest tool.
+    Analyze the FILE PATHS LIST and the user's keyword.
 
-      USER KEYWORD: "${keyword}"
+    USER KEYWORD: "${keyword}"
 
-      FILE PATHS LIST (JSON Array):
-      ${JSON.stringify(fileTree.slice(0, 2000))}
+    FILE PATHS LIST (JSON Array):
+    ${JSON.stringify(fileTree.slice(0, 2000))}
 
-      TASK:
-      1. Identify ALL paths from the list above that are related to "${keyword}".
-      2. Suggest which directory patterns to IGNORE to save tokens.
-      3. Provide a brief reasoning summary.
+    TASK:
+    1. Select ALL paths from the list that are directly relevant to the keyword
+       (entry points, core modules, related types, and utils they use).
+    2. Order them by importance.
+    3. Give a brief 1-2 sentence reasoning.
 
-      CRITICAL RULES:
-      - The "matchedPaths" array MUST contain EXACT strings copied from the FILE PATHS LIST above.
-      - Do NOT invent or hallucinate paths that are not in the list.
-      - If no paths match, return an empty array for "matchedPaths".
+    CRITICAL RULES:
+    - "matchedPaths" MUST contain EXACT strings copied from the FILE PATHS LIST.
+    - Do NOT invent or hallucinate paths.
+    - If nothing matches, return an empty array.
+    - Do NOT suggest ignore patterns. FILE SELECTION ONLY.
 
-      Return STRICT JSON ONLY:
-      {
-        "suggestedIgnore": ["array", "of", "directory/patterns"],
-        "reasoning": "explanation string",
-        "matchedPaths": ["exact/path/from/list.ts", "another/path.tsx"]
-      }
-    `;
+    Return STRICT JSON ONLY:
+    {
+      "reasoning": "explanation string",
+      "matchedPaths": ["exact/path/from/list.ts", "another/path.tsx"]
+    }
+  `;
 
     try {
       const isGemini = model.toLowerCase().includes("gemini");
       const bodyPayload: {
         contents: [{ parts: [{ text: string }] }];
         generationConfig?: { responseMimeType: string };
-      } = {
-        contents: [{ parts: [{ text: prompt }] }],
-      };
+      } = { contents: [{ parts: [{ text: prompt }] }] };
 
       if (isGemini) {
         bodyPayload.generationConfig = { responseMimeType: "application/json" };
@@ -114,32 +111,21 @@ export class AIManager {
       );
 
       const data = (await res.json()) as {
-        candidates?: {
-          content?: {
-            parts?: {
-              text?: string;
-            }[];
-          };
-        }[];
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
         error?: { message: string };
       };
-
       if (data.error)
         throw new Error(`${data.error.message} (Model: ${model})`);
 
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error("Empty response from AI");
 
-      // Robust Markdown Stripping
       const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
       const cleanJson = match ? match[1].trim() : text.trim();
-
       const parsed = JSON.parse(cleanJson) as AIDigestSuggestion;
 
-      // Validasi struktur response
-      if (!parsed.matchedPaths || !Array.isArray(parsed.matchedPaths)) {
+      if (!parsed.matchedPaths || !Array.isArray(parsed.matchedPaths))
         throw new Error("Invalid AI response format: missing matchedPaths");
-      }
 
       return parsed;
     } catch (e) {

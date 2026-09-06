@@ -2,23 +2,35 @@ import { existsSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import chalk from "chalk";
 import Table from "cli-table3";
-import { DEFAULT_CONFIG, SYSTEM } from "../constants/defaults.js"; // ← Tambah DEFAULT_CONFIG
+import { SYSTEM } from "../constants/defaults.js";
 import { BaseCommand } from "../core/BaseCommand.js";
 import { Scanner } from "../core/Scanner.js";
-import { AIManager } from "../managers/AIManager.js"; // ← TAMBAH INI
+import { AIManager } from "../managers/AIManager.js";
 import { ConfigManager } from "../managers/ConfigManager.js";
 import type {
   AIDigestSuggestion,
-  AppConfig,
   ScanStats,
   TreeIgnoreMode,
-} from "../types/index.js"; // ← Update types
+} from "../types/index.js";
 import * as UtilFunctions from "../utils/index.js";
 import { generateLog } from "../utils/logger.js";
 
+/**
+ * 🔥 FIX NESTED FENCE: fence harus SELALU lebih panjang dari run
+ * backtick terpanjang di dalam file. .md berisi ``` jadi aman.
+ */
+function fenceFor(text: string): string {
+  let max = 2;
+  for (const m of text.matchAll(/`+/g)) {
+    if (m[0].length > max) max = m[0].length;
+  }
+  return "`".repeat(Math.max(3, max + 1));
+}
+
 export class ScanCommand extends BaseCommand {
   public name = "scan";
-  public description = "Scan directory and generate digest";
+  public description =
+    "Scan directory and generate digest (AI mode: direct file selection)";
   public aliases = [".", "run"];
 
   public async execute(args: string[]): Promise<void> {
@@ -32,19 +44,17 @@ export class ScanCommand extends BaseCommand {
         [
           "Full Scan (Current Directory)",
           "Custom Paths (Specific Folders/Files)",
-          "🤖 AI Copilot (Keyword-based Config)", // ← BARU
+          "🤖 AI Copilot (Select & Digest Files)", // ← BARU
         ],
         { columns: 1 },
       );
 
-      // 🔥 AI COPILOT ROUTE
       if (mode.startsWith("🤖 AI Copilot")) {
         await this.runCopilotFlow();
         return;
       }
 
       if (mode.startsWith("Custom")) {
-        // 🔥 PAKAI TREESELECT MULTI-MODE
         const tree = new UtilFunctions.TreeSelect({
           title: "Select paths to scan:",
           rootDir: process.cwd(),
@@ -53,7 +63,6 @@ export class ScanCommand extends BaseCommand {
         const result = await tree.run();
 
         if (Array.isArray(result) && result.length > 0) {
-          // Convert absolute paths dari TreeSelect jadi relative path
           targetPaths = result
             .map((p) => relative(process.cwd(), p).replace(/\\/g, "/"))
             .filter(Boolean);
@@ -72,23 +81,23 @@ export class ScanCommand extends BaseCommand {
   }
 
   /**
-   * 🤖 AI COPILOT FLOW: Generate config berdasarkan keyword
+   * 🤖 AI COPILOT FLOW v2: AI + manual pick → digest LANGSUNG.
+   * prompter.config.json nggak disentuh sama sekali.
    */
   private async runCopilotFlow(): Promise<void> {
-    this.createBox("🤖 AI COPILOT DIGESTER", "Smart Config");
+    this.createBox("🤖 AI COPILOT DIGESTER", "Direct File Selection");
 
     const cwd = process.cwd();
     const auth = await ConfigManager.getAuth();
 
-    // 1. Auth Check
     if (!auth.apiKey) {
       this.error("❌ API Key missing. Run 'digest set-key <KEY>' first.");
       process.exit(1);
     }
 
-    // 2. Prompt Ignore Mode
+    // 1. Ignore mode — HANYA menentukan tree yang dilihat AI (bukan config!)
     const ignoreModeSelect = await this.promptSelectV2(
-      chalk.cyan("🌳 Tree Ignore Mode:"),
+      chalk.cyan("🌳 Tree for AI (Ignore Mode):"),
       [
         "Default (Follow .gitignore)",
         "Config Only (prompter.config.json)",
@@ -103,7 +112,7 @@ export class ScanCommand extends BaseCommand {
     else if (ignoreModeSelect.startsWith("Both")) modeKey = "both";
     else if (ignoreModeSelect.startsWith("None")) modeKey = "none";
 
-    // 3. Generate Clean Tree
+    // 2. Clean tree
     const treeSpinner = this.spinner("Mapping project structure...");
     let tree: string[];
     try {
@@ -118,7 +127,7 @@ export class ScanCommand extends BaseCommand {
       return;
     }
 
-    // 4. Prompt Keyword
+    // 3. Keyword
     const keyword = await this.promptText(
       chalk.cyan("🔍 Enter keyword/criteria (e.g. 'manager', 'auth'): "),
       "manager",
@@ -128,72 +137,91 @@ export class ScanCommand extends BaseCommand {
       return;
     }
 
-    // 5. AI Request
+    // 4. AI select FILES (bukan config)
     const aiSpinner = this.spinner(`Consulting ${auth.model || "Gemini"}...`);
     let suggestion: AIDigestSuggestion;
     try {
-      suggestion = await AIManager.suggestDigestConfig(tree, keyword, auth);
-      aiSpinner.succeed("AI suggestion ready!");
+      suggestion = await AIManager.suggestDigestFiles(tree, keyword, auth);
+      aiSpinner.succeed("AI selection ready!");
     } catch (e) {
       aiSpinner.fail(`AI Error: ${(e as Error).message}`);
       return;
     }
 
-    // 6. Display Reasoning
     this.createBox(
       suggestion.reasoning || "No reasoning provided.",
       "AI Reasoning",
     );
 
-    // 7. Validate matchedPaths (filter yang ga ada di tree asli)
-    const validPaths = suggestion.matchedPaths.filter(
-      (p) => tree.includes(p), // Sekarang validasinya pasti akurat karena keduanya path murni
-    );
+    // 5. Validate matchedPaths
+    const validPaths = suggestion.matchedPaths.filter((p) => tree.includes(p));
 
     if (validPaths.length === 0) {
-      this.warn(
-        "⚠️ AI did not find or validate any specific paths matching the keyword.",
-      );
+      this.warn("⚠️ AI found no matching paths. Add files manually below.");
     } else {
-      this.log(chalk.cyan(`\n📂 AI found ${validPaths.length} matched paths.`));
+      this.log(chalk.cyan(`\n📂 AI selected ${validPaths.length} files.`));
     }
 
-    // ─── 🛠️ EDIT PHASE: Remove & Add Manual ───
-    let finalPathsToInclude = new Set<string>(validPaths);
+    // ─── 🛠️ EDIT PHASE: tambah manual + remove ───
+    let finalPaths = new Set<string>(validPaths);
     let editing = true;
 
     while (editing) {
       const action = await this.promptSelectV2(
-        chalk.cyan("🛠️ Edit AI Suggestions:"),
+        chalk.cyan(`🛠️ Edit Selection (${finalPaths.size} files):`),
         [
-          "➕ Add paths manually (from file tree)",
-          "➖ Remove paths from AI suggestions",
-          "✅ Confirm & Apply to config",
+          "➕ Add files manually (browse file tree)",
+          "⌨️ Add file by typing path",
+          "➖ Remove files from selection",
+          "👀 Preview current selection",
+          "✅ Confirm & Digest Now",
           "❌ Abort",
         ],
         { columns: 1 },
       );
 
       if (action === "❌ Abort") {
-        this.dim("Aborted. No changes made.");
+        this.dim("Aborted. Nothing digested, config untouched.");
         return;
       }
 
-      if (action === "✅ Confirm & Apply to config") {
+      if (action === "✅ Confirm & Digest Now") {
         editing = false;
         break;
       }
 
-      if (action === "➕ Add paths manually") {
-        // Filter tree yang BELUM ada di finalPathsToInclude
-        const availableToAdd = tree.filter((p) => !finalPathsToInclude.has(p));
+      if (action === "➕ Add files manually (browse file tree)") {
+        const treeSelect = new UtilFunctions.TreeSelect({
+          title: "Space = select • Enter = confirm • Esc = cancel",
+          rootDir: cwd,
+          multiSelect: true,
+        });
+        const picked = await treeSelect.run();
 
+        if (Array.isArray(picked) && picked.length > 0) {
+          let added = 0;
+          for (const abs of picked) {
+            const rel = relative(cwd, abs).replace(/\\/g, "/");
+            // Bebas nambah apapun (termasuk yang di-ignore config) —
+            // digestFiles baca langsung, ignore rule nggak apply.
+            if (rel && !finalPaths.has(rel)) {
+              finalPaths.add(rel);
+              added++;
+            }
+          }
+          this.success(`   ✅ Added ${added} file(s).`);
+        } else {
+          this.dim("   No files added.");
+        }
+      }
+
+      if (action === "⌨️ Add file by typing path") {
+        const availableToAdd = tree.filter((p) => !finalPaths.has(p));
         if (availableToAdd.length === 0) {
-          this.warn("All available paths are already included.");
+          this.warn("All tree paths are already included.");
           continue;
         }
 
-        // Gunakan AutoComplete path-aware
         const customPath = await this.promptAutoComplete(
           "Type or select path to add:",
           availableToAdd,
@@ -201,162 +229,112 @@ export class ScanCommand extends BaseCommand {
         );
 
         if (customPath && tree.includes(customPath)) {
-          finalPathsToInclude.add(customPath);
+          finalPaths.add(customPath);
           this.success(`   ✅ Added: ${chalk.bold(customPath)}`);
         } else if (customPath) {
           this.warn(`   ⚠️ Path "${customPath}" not found in tree. Ignored.`);
         }
       }
 
-      if (action === "➖ Remove paths from AI suggestions") {
-        if (finalPathsToInclude.size === 0) {
-          this.warn("No paths to remove.");
+      if (action === "➖ Remove files from selection") {
+        if (finalPaths.size === 0) {
+          this.warn("No files to remove.");
           continue;
         }
 
-        // Gunakan MultiSelect untuk uncheck/remove
         const multiSelect = new UtilFunctions.MultiSelect<string>()
-          .title("Select paths to REMOVE (Space to toggle, Enter to confirm):")
+          .title("Uncheck files to REMOVE (Space to toggle, Enter to confirm):")
           .columns(1)
           .pageSize(10);
 
-        Array.from(finalPathsToInclude)
+        Array.from(finalPaths)
           .sort()
-          .forEach((p) => {
-            multiSelect.add(p, p, { selected: true }); // Default selected (akan di-keep)
-          });
+          .forEach((p) => multiSelect.add(p, p, { selected: true }));
 
         const keptPaths = await multiSelect.run();
-        finalPathsToInclude = new Set(keptPaths);
-        this.warn(
-          `   🗑️ Removed ${finalPathsToInclude.size - keptPaths.length} path(s).`,
+        // 🔥 FIX: hitung SEBELUM reassign (dulu selalu 0)
+        const removedCount = finalPaths.size - keptPaths.length;
+        finalPaths = new Set(keptPaths);
+        this.warn(`   🗑️ Removed ${removedCount} file(s).`);
+      }
+
+      if (action === "👀 Preview current selection") {
+        this.createBox(
+          Array.from(finalPaths)
+            .sort()
+            .map((p) => `  • ${p}`)
+            .join("\n") || "(empty)",
+          `Selection (${finalPaths.size})`,
         );
       }
     }
 
-    // ─── 💾 APPLY CONFIG PHASE ───
-    if (
-      finalPathsToInclude.size === 0 &&
-      (!suggestion.suggestedIgnore || suggestion.suggestedIgnore.length === 0)
-    ) {
-      this.warn(
-        "No paths selected and no ignore patterns suggested. Nothing to apply.",
+    // ─── 🚀 DIRECT DIGEST — zero config touched ───
+    if (finalPaths.size === 0) {
+      this.warn("No files selected. Aborted.");
+      return;
+    }
+    await this.digestSelected(Array.from(finalPaths));
+  }
+
+  /** Digest daftar file eksplisit → reuse displayReport + writeOutput */
+  private async digestSelected(paths: string[]): Promise<void> {
+    const cwd = process.cwd();
+    const projectName = await this.getProjectName(cwd);
+
+    this.log(chalk.cyan(`\n⚡ PROMPTER v${SYSTEM.VERSION}`));
+    this.dim(`   Project: ${chalk.bold(projectName)}`);
+
+    const spinner = this.spinner(
+      `Digesting ${paths.length} selected file(s)...`,
+    );
+    const stats = await Scanner.digestFiles(cwd, paths);
+    spinner.succeed(`Digested ${stats.files.length}/${paths.length} file(s).`);
+
+    if (stats.files.length === 0) {
+      this.error(
+        "❌ No valid files to digest (missing, binary, or too large).",
       );
       return;
     }
+    if (stats.skippedCount > 0) {
+      this.warn(
+        `   ⚠️ Skipped ${stats.skippedCount} file(s): missing, binary, or oversized.`,
+      );
+    }
 
-    const applyMode = await this.promptSelectV2(
-      "How to apply?",
-      [
-        "Merge (Add to existing config)",
-        "Replace (Overwrite ignore & include)",
-        "Include Only (Just add to forceInclude)",
-      ],
-      { columns: 1 },
+    this.displayReport(stats);
+
+    const shouldWrite = await this.promptYesNo(
+      `${chalk.bgCyan.black(" ACTION ")} Write Digest File? ${chalk.dim("(Y/n)")} `,
     );
 
-    const cfgPath = join(cwd, "prompter.config.json");
-
-    const existingConfig: AppConfig = {
-      ignoredPatterns: new Set(DEFAULT_CONFIG.ignoredPatterns),
-      ignoredExts: new Set(DEFAULT_CONFIG.ignoredExts),
-      maxFileSize: DEFAULT_CONFIG.maxFileSize,
-      forceInclude: new Set(DEFAULT_CONFIG.forceInclude),
-      prePushScripts: [...(DEFAULT_CONFIG.prePushScripts || [])],
-    };
-
-    if (await Bun.file(cfgPath).exists()) {
-      try {
-        const raw = await Bun.file(cfgPath).json();
-        if (raw.ignoredPatterns)
-          existingConfig.ignoredPatterns = new Set(raw.ignoredPatterns);
-        if (raw.ignoredExts)
-          existingConfig.ignoredExts = new Set(raw.ignoredExts);
-        if (raw.maxFileSize) existingConfig.maxFileSize = raw.maxFileSize;
-        if (raw.forceInclude)
-          existingConfig.forceInclude = new Set(raw.forceInclude);
-        if (raw.prePushScripts)
-          existingConfig.prePushScripts = raw.prePushScripts;
-      } catch {}
-    }
-
-    let newPatterns = existingConfig.ignoredPatterns;
-    let newForce = existingConfig.forceInclude;
-
-    if (applyMode.startsWith("Merge")) {
-      (suggestion.suggestedIgnore || []).forEach((p) => newPatterns.add(p));
-      finalPathsToInclude.forEach((p) => newForce.add(p));
-    } else if (applyMode.startsWith("Replace")) {
-      newPatterns = new Set(suggestion.suggestedIgnore || []);
-      newForce = new Set(finalPathsToInclude);
-    } else if (applyMode.startsWith("Include Only")) {
-      finalPathsToInclude.forEach((p) => newForce.add(p));
-    }
-
-    const finalConfig: AppConfig = {
-      ignoredPatterns: newPatterns,
-      ignoredExts: existingConfig.ignoredExts,
-      maxFileSize: existingConfig.maxFileSize,
-      forceInclude: newForce,
-      prePushScripts: existingConfig.prePushScripts || [],
-    };
-
-    const serializable = {
-      ignoredPatterns: Array.from(finalConfig.ignoredPatterns).sort((a, b) =>
-        a.localeCompare(b),
-      ),
-      ignoredExts: Array.from(finalConfig.ignoredExts).sort((a, b) =>
-        a.localeCompare(b),
-      ),
-      maxFileSize: finalConfig.maxFileSize,
-      forceInclude: Array.from(finalConfig.forceInclude).sort((a, b) =>
-        a.localeCompare(b),
-      ),
-      prePushScripts: (finalConfig.prePushScripts || []).sort((a, b) =>
-        a.localeCompare(b),
-      ),
-    };
-
-    try {
-      await Bun.write(cfgPath, JSON.stringify(serializable, null, 2));
-      this.success(`\n✅ Config updated: ${cfgPath}`);
-    } catch (e) {
-      this.error(`Failed to save config: ${(e as Error).message}`);
+    if (!shouldWrite) {
+      this.dim("Cancelled");
       return;
     }
 
-    // 10. Ask to scan now
-    const scanNow = await this.promptYesNo("Scan project with new config now?");
-    if (scanNow) {
-      await this.scanTargets(["."]);
-    } else {
-      this.dim("You can run 'digest scan' manually later.");
-    }
+    await this.writeOutput(stats, projectName, "AI");
   }
 
-  // 🔥 NEW HELPER: Detect Project Name from Git or Folder
+  // 🔥 getProjectName — SAMA PERSIS (tidak diubah)
   private async getProjectName(root: string): Promise<string> {
     try {
-      // 1. Coba baca dari .git/config (Paling Akurat)
       const gitConfigPath = join(root, ".git", "config");
       const gitConfigFile = Bun.file(gitConfigPath);
 
       if (await gitConfigFile.exists()) {
         const text = await gitConfigFile.text();
-        // Regex buat ambil nama repo dari URL (e.g. github.com/user/my-repo.git -> my-repo)
         const match = text.match(/url\s*=\s*.*\/([^/]+?)(\.git)?\s*$/m);
         if (match?.[1]) {
           return match[1];
         }
       }
     } catch {
-      // Ignore error, fallback ke folder name
+      // fallback ke folder name
     }
-
-    // 2. Fallback: Nama folder tempat command dijalankan
     return basename(root);
   }
-
   private async scanTargets(paths: string[]) {
     const aggregatedStats: ScanStats = {
       files: [],
@@ -365,7 +343,7 @@ export class ScanCommand extends BaseCommand {
       skippedSize: 0,
       totalSize: 0,
       extStats: {},
-      duration: "0",
+      duration: 0,
       forceIncludedCount: 0,
     };
 
@@ -426,7 +404,7 @@ export class ScanCommand extends BaseCommand {
       }
     }
 
-    aggregatedStats.duration = (performance.now() - startTime).toFixed(0);
+    aggregatedStats.duration = performance.now() - startTime;
 
     if (aggregatedStats.files.length === 0) {
       this.error("❌ No valid files found in selected targets.");
@@ -471,7 +449,7 @@ export class ScanCommand extends BaseCommand {
           stats.skippedSize,
         )})`,
       ],
-      [chalk.dim("Duration"), `${stats.duration}ms`],
+      [chalk.dim("Duration"), `${stats.duration.toFixed(0)} ms`],
     );
     generateLog({ type: "info", raw: true }, table.toString());
 
@@ -497,12 +475,11 @@ export class ScanCommand extends BaseCommand {
     }
     generateLog({ type: "info", raw: true }, "");
   }
-
-  private async writeOutput(stats: ScanStats, projectName: string) {
-    // 🔥 Nama file output sekarang konsisten: DIGEST_NamaRepo_Timestamp
+  // writeOutput — FIXED: nested fence + binary guard + await end + label
+  private async writeOutput(stats: ScanStats, projectName: string, label = "") {
     const outPath = join(
       SYSTEM.OUT_DIR,
-      `DIGEST_${projectName}_${Date.now()}.md`,
+      `DIGEST_${projectName}${label ? `_${label}` : ""}_${Date.now()}.md`,
     );
 
     if (!(await Bun.file(SYSTEM.OUT_DIR).exists())) {
@@ -515,11 +492,8 @@ export class ScanCommand extends BaseCommand {
       highWaterMark: SYSTEM.CHUNK_SIZE,
     });
 
-    // 🔥 Judul Markdown juga ngikutin nama repo
     writer.write(
-      `# Project Digest: ${projectName}\n\n## Structure\n\`\`\`\n${stats.tree.join(
-        "\n",
-      )}\n\`\`\`\n\n## Code Content\n`,
+      `# Project Digest: ${projectName}${label ? ` (${label})` : ""}\n\n## Structure\n\`\`\`\n${stats.tree.join("\n")}\n\`\`\`\n\n## Code Content\n`,
     );
 
     const writeSpin = this.spinner("Writing to disk...");
@@ -531,8 +505,20 @@ export class ScanCommand extends BaseCommand {
       const contents = await Promise.all(
         chunk.map(async (f) => {
           try {
-            const text = await Bun.file(f.path).text();
-            return `\n// --- ${f.relPath} ---\n\`\`\`${f.ext}\n${text}\n\`\`\`\n`;
+            let text = await Bun.file(f.path).text();
+
+            // 🛡️ Binary guard: null byte = bukan teks
+            if (text.includes("")) {
+              return `\n// --- ${f.relPath} (Skipped: binary file) ---\n`;
+            }
+
+            // 🔥 FIX #2: CRLF → LF (hemat token, output konsisten)
+            text = text.replace(/\r\n/g, "\n");
+
+            // 🔥 FIX #1: fence adaptif — .md berisi ``` nggak ngerusak struktur
+            const fence = fenceFor(text);
+            const lang = f.ext.replace(/^\./, "");
+            return `\n// --- ${f.relPath} ---\n${fence}${lang}\n${text}\n${fence}\n`;
           } catch {
             return `\n// --- ${f.relPath} (Error Reading File) ---\n`;
           }
@@ -547,7 +533,8 @@ export class ScanCommand extends BaseCommand {
       )}%`;
     }
 
-    writer.end();
+    // 🔥 FIX: await end() biar nggak race sama smartOpenFolder
+    await writer.end();
     writeSpin.succeed(chalk.green(`Saved: ${basename(outPath)}`));
 
     this.dim("   📂 Opening output directory...");

@@ -12,9 +12,9 @@ export interface ScanStats {
   skippedCount: number;
   skippedSize: number;
   totalSize: number;
-  forceIncludedCount: number; // ← BARU
+  forceIncludedCount?: number; // ← BARU
   extStats: Record<string, { count: number; size: number }>;
-  duration: string;
+  duration: number;
 }
 
 export interface AuthConfig {
@@ -38,8 +38,6 @@ export interface AICommitResponse {
 export type TreeIgnoreMode = "gitignore" | "config" | "both" | "none";
 
 export interface AIDigestSuggestion {
-  suggestedIgnore: string[];
-  suggestedInclude: string[];
   reasoning: string;
   matchedPaths: string[];
 }

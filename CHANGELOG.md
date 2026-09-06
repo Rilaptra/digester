@@ -1,5 +1,12 @@
 # Changelog
 
+## [17.15.0-ai] - 2026-09-06
+- ✨ [AI Copilot v2] Transitioned AI copilot from generating config files to direct file selection based on keywords
+- 🛠️ [Scanner] Added ignore rules for `.git` and `node_modules` to prevent token waste and blind spots
+- 📦 [Scanner] Implemented `digestFiles` method for one-off explicit file digestion without modifying configurations
+- 🎨 [Commands] Enhanced scan interactive UI with manual file browsing, path typing, selection preview, and direct digest options
+- ⚡️ [Performance] Converted scan duration metrics from strings to numerical values and optimized file writing processes
+
 ## [17.14.0-ai] - 2026-08-15
 - 🚀 Integrate native TreeSelect component into the scan command for directory selection
 - ✨ Add comprehensive test suite script for validating all TUI components

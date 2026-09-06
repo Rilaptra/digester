@@ -50,7 +50,7 @@ export class SrcCommand extends BaseCommand {
       skippedSize: 0,
       totalSize: 0,
       extStats: {},
-      duration: "0",
+      duration: 0,
     };
 
     const startTime = performance.now();
@@ -103,7 +103,7 @@ export class SrcCommand extends BaseCommand {
       }
     }
 
-    aggregatedStats.duration = (performance.now() - startTime).toFixed(0);
+    aggregatedStats.duration = performance.now() - startTime;
 
     if (aggregatedStats.files.length === 0) {
       this.error("❌ No files found in 'src' directory.");

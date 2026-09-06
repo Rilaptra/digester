@@ -226,7 +226,6 @@ export interface ProgressBarConfig {
 }
 export class ProgressBar {
   private current = 0;
-  private startTime: number;
   constructor(private config: Required<ProgressBarConfig>) {
     this.config = {
       width: 30,
@@ -253,7 +252,7 @@ export class ProgressBar {
         `${Bun.color(success ? "green" : "red", "ansi")}${success ? "✔" : "✖"} ${msg}\x1b[0m\n`,
       );
   }
-  private render(isFinal = false) {
+  private render(_isFinal = false) {
     const ratio = this.config.total > 0 ? this.current / this.config.total : 0;
     const filled = Math.round(ratio * this.config.width);
     const c1 = Bun.color(this.config.gradientStart, "{rgb}") || {
@@ -380,7 +379,7 @@ export class TreeSelect {
           : "";
         const content = `${check}${icon} ${n.name}`;
         lines.push(
-          `${indent}${isFocus ? c.cyan("❯ ") + c.cyanBold(content) : "  " + c.white(content)}`,
+          `${indent}${isFocus ? c.cyan("❯ ") + c.cyanBold(content) : `  ${c.white(content)}`}`,
         );
       });
       stdout.write(lines.join("\n"));
@@ -458,7 +457,7 @@ export class Notification {
         },
       });
       user32.symbols.MessageBoxA(ptr(0), message, title, 0x00000040); // 0x40 = MB_ICONINFORMATION
-    } catch (e) {
+    } catch (_e) {
       // Fallback ke PowerShell jika FFI gagal
       Bun.spawn(
         [

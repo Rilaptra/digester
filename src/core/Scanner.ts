@@ -1,9 +1,233 @@
 import { readdir, stat } from "node:fs/promises";
-import { basename, extname, join, relative } from "node:path";
+import { basename, extname, isAbsolute, join, relative } from "node:path";
 import { ConfigManager } from "../managers/ConfigManager.js"; // ← TAMBAH INI
 import type { AppConfig, ScanStats, TreeIgnoreMode } from "../types/index.js"; // ← Update type import
 
 export class Scanner {
+  /** Direktori yang SELALU disembunyikan dari AI tree, apapun modenya */
+  private static readonly AI_TREE_HIDDEN_DIRS = new Set([
+    ".git",
+    "node_modules",
+  ]);
+
+  /** Ekstensi non-teks yang cuma makan slot 2000 (AI nggak bisa baca) */
+  private static readonly AI_TREE_HIDDEN_EXTS = new Set([
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".ico",
+    ".webp",
+    ".svg",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".otf",
+    ".eot",
+    ".zip",
+    ".gz",
+    ".tar",
+    ".7z",
+    ".mp4",
+    ".mp3",
+    ".wav",
+    ".pdf",
+    ".exe",
+    ".dll",
+    ".so",
+    ".wasm",
+    ".lock",
+  ]);
+
+  /**
+   * 🤖 AI COPILOT HELPER: clean relative paths untuk AI (FIXED)
+   */
+  static async getCleanTree(
+    rootDir: string,
+    mode: TreeIgnoreMode,
+  ): Promise<string[]> {
+    let config: Partial<AppConfig> = {
+      ignoredPatterns: new Set(),
+      ignoredExts: new Set(),
+      maxFileSize: 500,
+      forceInclude: new Set(),
+    };
+
+    try {
+      if (mode === "gitignore") {
+        const gitignorePath = join(rootDir, ".gitignore");
+        if (await Bun.file(gitignorePath).exists()) {
+          const text = await Bun.file(gitignorePath).text();
+          const patterns = text
+            .split("\n")
+            .map((l) => l.trim())
+            .filter((l) => l && !l.startsWith("#") && !l.startsWith("!"))
+            .map((l) => l.replace(/^\/|\/$/g, ""));
+          config.ignoredPatterns = new Set(patterns);
+        }
+      } else if (mode === "config") {
+        const cfgPath = join(rootDir, "prompter.config.json");
+        if (await Bun.file(cfgPath).exists()) {
+          const raw = await Bun.file(cfgPath).json();
+          if (raw.ignoredPatterns)
+            config.ignoredPatterns = new Set(raw.ignoredPatterns);
+          if (raw.ignoredExts) config.ignoredExts = new Set(raw.ignoredExts);
+        }
+      } else if (mode === "both") {
+        config = await ConfigManager.load(rootDir);
+      }
+
+      // 🛡️ FIX: .git & node_modules JANGAN pernah bocor, apapun modenya.
+      // Sebelumnya slice(0,2000) di AI dimakan .git/objects → AI buta ke src/
+      config.ignoredPatterns = new Set([
+        ...(config.ignoredPatterns ?? []),
+        ...Scanner.AI_TREE_HIDDEN_DIRS,
+      ]);
+      config.ignoredExts = new Set([
+        ...(config.ignoredExts ?? []),
+        ...Scanner.AI_TREE_HIDDEN_EXTS,
+      ]);
+
+      const stats = await Scanner.run(rootDir, config);
+      return stats.files.map((f) => f.relPath.replace(/\\/g, "/"));
+    } catch (error) {
+      throw new Error(
+        `Scanner.getCleanTree failed: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * 🎯 DIGEST LANGSUNG dari daftar file eksplisit (AI + manual pick).
+   * Nggak baca config, nggak apply ignore pattern — murni one-off.
+   * Return ScanStats biar displayReport() & writeOutput() kepake ulang.
+   */
+  static async digestFiles(
+    rootDir: string,
+    relPaths: string[],
+    opts: { maxFileSizeKB?: number } = {},
+  ): Promise<ScanStats> {
+    const start = performance.now();
+    const maxFileSize = opts.maxFileSizeKB ?? 500;
+
+    const files: ScanStats["files"] = [];
+    const includedRels: string[] = [];
+    const extStats: Record<string, { count: number; size: number }> = {};
+    let totalSize = 0;
+    let skippedCount = 0;
+    let skippedSize = 0;
+
+    const unique = [
+      ...new Set(
+        relPaths
+          .map((p) => p.replace(/\\/g, "/").replace(/^\.\//, "").trim())
+          .filter(Boolean),
+      ),
+    ];
+
+    for (const rel of unique) {
+      const fullPath = join(rootDir, rel);
+
+      // ⛔ Anti path traversal: harus tetap di dalam rootDir
+      const back = relative(rootDir, fullPath);
+      if (back.startsWith("..") || isAbsolute(back)) {
+        skippedCount++;
+        continue;
+      }
+
+      let fileInfo;
+      try {
+        fileInfo = await stat(fullPath);
+      } catch {
+        skippedCount++;
+        continue;
+      }
+      if (!fileInfo.isFile()) {
+        skippedCount++;
+        continue;
+      }
+
+      const sizeKB = fileInfo.size / 1024;
+      if (sizeKB > maxFileSize) {
+        skippedCount++;
+        skippedSize += fileInfo.size;
+        continue;
+      }
+
+      // 🛡️ Binary guard: null byte di 4KB pertama = bukan file teks
+      try {
+        const head = new Uint8Array(
+          await Bun.file(fullPath).slice(0, 4096).arrayBuffer(),
+        );
+        if (head.includes(0)) {
+          skippedCount++;
+          skippedSize += fileInfo.size;
+          continue;
+        }
+      } catch {
+        skippedCount++;
+        continue;
+      }
+
+      const ext = extname(rel);
+      files.push({ path: fullPath, relPath: rel, size: fileInfo.size, ext });
+      includedRels.push(rel);
+      totalSize += fileInfo.size;
+      if (!extStats[ext]) extStats[ext] = { count: 0, size: 0 };
+      extStats[ext].count++;
+      extStats[ext].size += fileInfo.size;
+    }
+
+    return {
+      files,
+      tree: Scanner.buildTreeFromPaths(includedRels),
+      skippedCount,
+      skippedSize,
+      totalSize,
+      forceIncludedCount: 0,
+      extStats,
+      duration: performance.now() - start,
+    };
+  }
+
+  /** Tree mini cuma dari file yang kepilih */
+  private static buildTreeFromPaths(relPaths: string[]): string[] {
+    type Node = { dirs: Map<string, Node>; files: string[] };
+    const root: Node = { dirs: new Map(), files: [] };
+
+    for (const rel of relPaths) {
+      const parts = rel.split("/");
+      const fileName = parts.pop();
+      if (!fileName) continue;
+      let cur = root;
+      for (const part of parts) {
+        if (!cur.dirs.has(part))
+          cur.dirs.set(part, { dirs: new Map(), files: [] });
+        cur = cur.dirs.get(part)!;
+      }
+      cur.files.push(fileName);
+    }
+
+    const lines: string[] = [];
+    const walkNode = (node: Node, prefix: string) => {
+      const dirNames = [...node.dirs.keys()].sort();
+      const fileNames = [...node.files].sort();
+      const total = dirNames.length + fileNames.length;
+      let i = 0;
+      for (const d of dirNames) {
+        const isLast = ++i === total;
+        lines.push(`${prefix}${isLast ? "└── " : "├── "}${d}/`);
+        walkNode(node.dirs.get(d)!, prefix + (isLast ? "    " : "│   "));
+      }
+      for (const f of fileNames) {
+        const isLast = ++i === total;
+        lines.push(`${prefix}${isLast ? "└── " : "├── "}${f}`);
+      }
+    };
+    walkNode(root, "");
+    return lines;
+  }
+
   private static normalizeConfig(config: Partial<AppConfig>): AppConfig {
     return {
       ignoredPatterns: config.ignoredPatterns || new Set(),
@@ -86,56 +310,6 @@ export class Scanner {
     if (config.ignoredExts?.has(ext))
       return { include: false, reason: "ignored-ext" };
     return { include: true, reason: "default" };
-  }
-
-  /**
-   * 🤖 AI COPILOT HELPER: Generate clean relative paths untuk AI
-   */
-  static async getCleanTree(
-    rootDir: string,
-    mode: TreeIgnoreMode,
-  ): Promise<string[]> {
-    let config: Partial<AppConfig> = {
-      ignoredPatterns: new Set(),
-      ignoredExts: new Set(),
-      maxFileSize: 500,
-      forceInclude: new Set(),
-    };
-
-    try {
-      if (mode === "gitignore") {
-        const gitignorePath = join(rootDir, ".gitignore");
-        if (await Bun.file(gitignorePath).exists()) {
-          const text = await Bun.file(gitignorePath).text();
-          const patterns = text
-            .split("\n")
-            .map((l) => l.trim())
-            .filter((l) => l && !l.startsWith("#") && !l.startsWith("!"))
-            .map((l) => l.replace(/^\/|\/$/g, ""));
-          config.ignoredPatterns = new Set(patterns);
-        }
-      } else if (mode === "config") {
-        const cfgPath = join(rootDir, "prompter.config.json");
-        if (await Bun.file(cfgPath).exists()) {
-          const raw = await Bun.file(cfgPath).json();
-          if (raw.ignoredPatterns)
-            config.ignoredPatterns = new Set(raw.ignoredPatterns);
-          if (raw.ignoredExts) config.ignoredExts = new Set(raw.ignoredExts);
-        }
-      } else if (mode === "both") {
-        config = await ConfigManager.load(rootDir);
-      }
-
-      const stats = await Scanner.run(rootDir, config);
-
-      // 🔥 FIX UTAMA: Kembalikan array of relative paths murni (tanpa icon/ANSI)
-      // Contoh: "src/app/api/ghost/route.ts"
-      return stats.files.map((f) => f.relPath.replace(/\\/g, "/"));
-    } catch (error) {
-      throw new Error(
-        `Scanner.getCleanTree failed: ${(error as Error).message}`,
-      );
-    }
   }
 
   static async run(
@@ -237,7 +411,7 @@ export class Scanner {
     };
 
     await walk(rootDir, "");
-    const duration = (performance.now() - start).toFixed(0);
+    const duration = performance.now() - start;
 
     return {
       files,
@@ -247,7 +421,7 @@ export class Scanner {
       totalSize,
       forceIncludedCount,
       extStats,
-      duration: `${duration}ms`,
+      duration,
     };
   }
 }
