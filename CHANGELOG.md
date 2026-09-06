@@ -1,5 +1,11 @@
 # Changelog
 
+## [17.15.1-ai] - 2026-09-06
+- 📦 Update `bun.lock` and `package.json` with latest dependency versions.
+- ⚡️ Upgrade `@biomejs/biome` from `2.5.2` to `2.5.12` for tooling improvements.
+- ⚡️ Upgrade `bun-types` and `@types/bun` to align with recent runtime updates.
+- 🛠️ Update auxiliary packages including `@types/node`, `ansi-regex`, `cli-spinners`, `get-east-asian-width`, `strip-ansi`, `undici-types`, and `yoctocolors`.
+
 ## [17.15.0-ai] - 2026-09-06
 - ✨ [AI Copilot v2] Transitioned AI copilot from generating config files to direct file selection based on keywords
 - 🛠️ [Scanner] Added ignore rules for `.git` and `node_modules` to prevent token waste and blind spots
